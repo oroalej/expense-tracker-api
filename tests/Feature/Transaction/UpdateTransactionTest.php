@@ -9,7 +9,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 class UpdateTransactionTest extends TestCase
@@ -48,7 +47,7 @@ class UpdateTransactionTest extends TestCase
 
     public function test_asserts_guest_are_not_allowed(): void
     {
-        $this->putJson($this->url)->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $this->putJson($this->url)->assertUnauthorized();
     }
 
     public function test_asserts_amount_field_is_required(): void
@@ -152,7 +151,7 @@ class UpdateTransactionTest extends TestCase
     {
         $this->actingAs(User::factory()->create())
             ->putJson($this->url)
-            ->assertStatus(Response::HTTP_NOT_FOUND);
+            ->assertNotFound();
     }
 
     public function test_asserts_user_can_update_own_transaction(): void
@@ -167,7 +166,7 @@ class UpdateTransactionTest extends TestCase
 
         $this->actingAs($this->user)
             ->putJson($this->url, $attributes)
-            ->assertStatus(Response::HTTP_OK);
+            ->assertOk();
     }
 
     public function test_asserts_changes_reflected_in_database(): void
@@ -195,7 +194,7 @@ class UpdateTransactionTest extends TestCase
 
         $this->actingAs($this->user)
             ->putJson($this->url, $attributes)
-            ->assertStatus(Response::HTTP_OK);
+            ->assertOk();
 
         $this->assertDatabaseCount('transactions', 1);
         $this->assertDatabaseHas('transactions', [

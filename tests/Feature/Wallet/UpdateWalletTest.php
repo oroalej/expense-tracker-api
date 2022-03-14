@@ -7,7 +7,6 @@ use App\Enums\WalletTypeState;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 class UpdateWalletTest extends TestCase
@@ -35,7 +34,7 @@ class UpdateWalletTest extends TestCase
 
     public function test_asserts_guest_now_allowed(): void
     {
-        $this->putJson($this->url)->assertStatus(Response::HTTP_UNAUTHORIZED);
+        $this->putJson($this->url)->assertUnauthorized();
     }
 
     public function test_asserts_name_field_is_required(): void
@@ -86,7 +85,7 @@ class UpdateWalletTest extends TestCase
 
         $this->actingAs($anotherUser)
             ->putJson($this->url)
-            ->assertStatus(Response::HTTP_NOT_FOUND);
+            ->assertNotFound();
     }
 
     public function test_asserts_user_can_update_own_wallet(): void
@@ -102,7 +101,7 @@ class UpdateWalletTest extends TestCase
 
         $this->actingAs($this->user)
             ->putJson($this->url, $attributes)
-            ->assertStatus(Response::HTTP_OK);
+            ->assertOk();
     }
 
     public function test_asserts_update_reflect_in_database(): void
@@ -118,7 +117,7 @@ class UpdateWalletTest extends TestCase
 
         $this->actingAs($this->user)
             ->putJson($this->url, $attributes)
-            ->assertStatus(Response::HTTP_OK);
+            ->assertOk();
 
         $this->assertDatabaseHas('wallets', [
             'id' => $this->wallet->id,

@@ -6,10 +6,8 @@ use App\Models\Scopes\UserAuthenticated;
 
 trait UseAuthenticateRestriction
 {
-	protected static function booted(): void
-	{
-		parent::booted();
-
-		static::addGlobalScope(new UserAuthenticated());
-	}
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new UserAuthenticated());
+    }
 }

@@ -2,65 +2,141 @@
 
 namespace Database\Seeders;
 
-use App\Enums\FeatureState;
-use App\Models\Category;
-use App\Models\CategoryScope;
+use App\Actions\Category\CreateCategory;
+use App\DataObject\CategoryData;
+use App\Enums\CategoryTypeState;
+use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
-	/**
-	 * Run the database seeds.
-	 *
-	 * @return void
-	 */
-	public function run(): void
-	{
-		//
-	}
+    protected User $user;
 
-	public function dataCategories( array $categories, int $type, $parent = null ): void
-	{
-		foreach ( $categories as $data ) {
-			if ( is_array( $data ) ) {
-				$attributes = array_intersect_key( $data, array_flip( [ 'name' ] ) );
-			} else {
-				$attributes['name'] = $data;
-			}
+    /**
+     * Run the database seeds.
+     *
+     * @param  User|Authenticatable  $user
+     * @return void
+     */
+    public function run(User|Authenticatable $user): void
+    {
+        $this->user = $user;
 
-			if ( $parent ) {
-				$attributes['parent_id'] = $parent->id;
-			}
+        $this->dataCategories(
+            $this->getIncomeCategories(),
+            CategoryTypeState::Expense
+        );
+        $this->dataCategories(
+            $this->getExpenseCategories(),
+            CategoryTypeState::Expense
+        );
+    }
 
-			$attributes['term_taxonomy_id'] = $type;
-			$lastInsertedCategory           = $this->insertData( $attributes );
+    /**
+     * @param  array  $categories
+     * @param  CategoryTypeState  $categoryType
+     * @param  int|null  $parentId
+     * @return void
+     */
+    public function dataCategories(
+        array $categories,
+        CategoryTypeState $categoryType,
+        int|null $parentId = null
+    ): void {
+        foreach ($categories as $data) {
+            $attributes['name'] = $data['name'] ?? $data;
+            $attributes['is_editable'] = $data['is_editable'] ?? true;
 
-			if ( ! empty( $data['children'] ) ) {
-				$this->dataCategories( $data['children'], $type, $lastInsertedCategory );
-			}
-		}
-	}
+            $categoryData = new CategoryData(
+                $attributes['name'],
+                $categoryType,
+                null,
+                $parentId,
+                $attributes['is_editable']
+            );
 
-	public function insertData( array $attributes ): Category
-	{
-		$category = new Category( [
-			'name' => $attributes['name'],
-		] );
+            $category = (new CreateCategory(
+                $categoryData,
+                $this->user
+            ))->execute();
 
-		$category->type()->associate( $attributes['term_taxonomy_id'] );
+            if (isset($data['children'])) {
+                $this->dataCategories(
+                    $data['children'],
+                    $categoryType,
+                    $category->id
+                );
+            }
+        }
+    }
 
-		if ( isset( $attributes['parent_id'] ) ) {
-			$category->parent()->associate( $attributes['parent_id'] );
-		}
+    public function getIncomeCategories(): array
+    {
+        return [
+            'Award',
+            'Gifts',
+            'Interest Money',
+            'Others',
+            'Salary',
+            'Selling',
+            [
+                'name' => 'Deposit',
+                'is_editable' => false,
+            ],
+        ];
+    }
 
-		$category->save();
-
-		$categoryScope = new CategoryScope();
-		$categoryScope->category()->associate( $category );
-		$categoryScope->type()->associate( FeatureState::Transaction->value );
-
-		$categoryScope->save();
-
-		return $category;
-	}
+    public function getExpenseCategories(): array
+    {
+        return [
+            [
+                'name' => 'Bills & Utilities',
+                'children' => [
+                    'Electricity',
+                    'Gas',
+                    'Internet',
+                    'Phone',
+                    'Rentals',
+                    'Television',
+                    'Water',
+                ],
+            ],
+            [
+                'name' => 'Transportation',
+                'children' => [
+                    'Fare',
+                    'Maintenance',
+                    'Parking Fees',
+                    'Petrol',
+                    'Taxi',
+                ],
+            ],
+            [
+                'name' => 'Shopping',
+                'children' => [
+                    'Accessories',
+                    'Clothing',
+                    'Electronics',
+                    'Footwear',
+                    'Grocery',
+                ],
+            ],
+            [
+                'name' => 'Entertainment',
+                'children' => ['Games', 'Movies'],
+            ],
+            'Health & Fitness',
+            'Insurance',
+            'Travel',
+            [
+                'name' => 'Withdrawal',
+                'is_editable' => false,
+            ],
+            [
+                'name' => 'Transfer',
+                'is_editable' => false,
+            ],
+        ];
+    }
 }

@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * @property int         $id
- * @property int         $user_id
- * @property string      $name
- * @property string      $description
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string $description
  *
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -23,17 +23,17 @@ use Illuminate\Support\Carbon;
  */
 class Tag extends Model
 {
-	use HasFactory, SoftDeletes, UseAuthenticateRestriction;
+    use HasFactory, SoftDeletes, UseAuthenticateRestriction;
 
-	protected $fillable = ['name', 'description'];
+    protected $fillable = ['name', 'description', 'is_default', 'is_editable'];
 
-	public function user(): BelongsTo
-	{
-		return $this->belongsTo(User::class);
-	}
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
-	public function transactions(): BelongsToMany
-	{
-		return $this->belongsToMany(Transaction::class);
-	}
+    public function transactions(): BelongsToMany
+    {
+        return $this->belongsToMany(Transaction::class);
+    }
 }

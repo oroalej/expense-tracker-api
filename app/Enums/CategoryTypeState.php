@@ -6,9 +6,9 @@ use App\Enums\Traits\EnumHelpers;
 
 enum CategoryTypeState: int
 {
-	use EnumHelpers;
+    use EnumHelpers;
 
-	case Income = 9;
-	case Expense = 10;
-	case Debt = 11;
+    case Income = 1;
+    case Expense = 2;
+    case Debt = 3;
 }

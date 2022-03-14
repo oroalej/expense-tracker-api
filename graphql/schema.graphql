@@ -1,0 +1,119 @@
+scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
+
+type Query @guard {
+    category(id: ID! @eq): Category @find
+    categories(
+        category_type: CategoryTypeState @eq(key: "category_type")
+    ): [Category!]! @paginate
+
+    tag(id: ID! @eq): Tag @find
+    tags: [Tag!]! @paginate
+
+    transaction(id: ID! @eq(key: "uuid")): Transaction @find
+    transactions(
+        category_id: ID @eq(key: "category_id")
+        wallet_id: ID @eq(key: "wallet_id")
+    ): [Transaction!]!
+    @paginate
+
+    wallet(id: ID! @eq): Wallet @find
+    wallets(
+        wallet_type: WalletTypeState @eq(key: "wallet_type")
+    )
+    : [Wallet!]! @paginate
+}
+
+type User @model(class: "\\App\\Models\\User") {
+    id: ID!
+    name: String!
+    email: String!
+    email_verified_at: DateTime
+
+    wallets: [Wallet]! @belongsToMany
+    categories: [Category]! @hasMany
+    tags: [Tag]! @hasMany
+    transactions: [Transaction]! @hasMany
+
+    created_at: DateTime!
+    updated_at: DateTime!
+}
+
+type Tag @model(class: "\\App\\Models\\Tag") {
+    id: ID!
+    name: String!
+    description: String!
+
+    user_id: ID!
+
+    user: User! @belongsTo
+
+    created_at: DateTime
+    updated_at: DateTime
+}
+
+type Category @model(class: "\\App\\Models\\Category") {
+    id: ID!
+    category_type: Int!
+    name: String!
+    description: String
+    is_default: Boolean!
+    is_editable: Boolean!
+
+    parent_id: ID
+    user_id: ID!
+
+    parent: Category @belongsTo
+    user: User! @belongsTo
+
+    created_at: DateTime
+    updated_at: DateTime
+}
+
+type Transaction @model(class: "\\App\\Models\\Transaction") {
+    uuid: String!
+    amount: Float!
+    remarks: String!
+    transaction_date: Date!
+
+    user_id: Int!
+    wallet_id: Int!
+    category_id: Int!
+
+    user: User! @belongsTo
+    wallet: Wallet! @belongsTo
+    category: Category! @belongsTo
+    tags: [Tag]! @belongsToMany
+
+    created_at: DateTime!
+    updated_at: DateTime!
+    deleted_at: DateTime
+}
+
+type Wallet @model(class: "\\App\\Models\\Wallet") {
+    uuid: String!
+    name: String!
+    description: String
+    current_balance: Float!
+    wallet_type: Int!
+
+    users: [User!]! @belongsToMany(relation: "users")
+
+    created_at: DateTime
+    updated_at: DateTime
+    deleted_at: DateTime
+}
+
+enum CategoryTypeState {
+    Income @enum(value: 1)
+    Expense @enum(value: 2)
+    Debt @enum(value: 3)
+}
+
+enum WalletTypeState {
+    Joint @enum(value: 1)
+    Savings @enum(value: 2)
+    Cash @enum(value: 3)
+    Payroll @enum(value: 4)
+    Checking @enum(value: 5)
+}

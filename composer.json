@@ -8,14 +8,16 @@
         "php": "^8.1.2",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^9.2",
-        "laravel/sanctum": "^2.14.1",
+        "laravel/sanctum": "^2.14",
         "laravel/tinker": "^2.7",
+        "nuwave/lighthouse": "^5.42",
         "spatie/laravel-sluggable": "^3.3"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^2.12",
         "fakerphp/faker": "^1.9.1",
         "laravel/sail": "^1.0.1",
+        "mll-lab/laravel-graphql-playground": "^2.6",
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^6.1",
         "pestphp/pest-plugin-faker": "^1.0",

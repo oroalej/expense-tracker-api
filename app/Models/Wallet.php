@@ -9,23 +9,23 @@ use Database\Factories\WalletFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * @property int                    $id
- * @property string                 $name
- * @property string                 $description
- * @property double                 $current_balance
- * @property Carbon|null            $created_at
- * @property Carbon|null            $updated_at
- * @property Carbon|null            $deleted_at
- * @property WalletTypeState        $wallet_type
+ * @property int $id
+ * @property string $name
+ * @property string $description
+ * @property double $current_balance
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ * @property WalletTypeState $wallet_type
  *
- * @property-read UserWallet|null   $access
+ * @property-read UserWallet|null $access
  * @property-read Collection|User[] $users
- * @property-read int|null          $users_count
+ * @property-read int|null $users_count
  * @method static WalletFactory factory()
  */
 class Wallet extends Model
@@ -58,6 +58,11 @@ class Wallet extends Model
         return $this->belongsToMany(User::class)
             ->using(UserWallet::class)
             ->withPivot('start_date', 'end_date', 'access_type')
-            ->as('access');
+            ->as('permissions');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
     }
 }

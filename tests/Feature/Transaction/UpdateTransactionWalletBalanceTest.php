@@ -9,250 +9,249 @@ use App\Models\Category;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
-use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 class UpdateTransactionWalletBalanceTest extends TestCase
 {
-	public string $url;
+    public string $url;
 
-	public User $user;
+    public User $user;
 
-	protected function setUp(): void
-	{
-		parent::setUp();
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-		$this->user = User::factory()->create();
+        $this->user = User::factory()->create();
 
-		$this->actingAs($this->user);
-	}
+        $this->actingAs($this->user);
+    }
 
-	public function test_asserts_wallet_balance_is_updated_when_category_was_changed_from_expense_to_income(): void
-	{
-		/** @var Category $incomeCategory */
-		$incomeCategory = Category::factory()
-			->for($this->user)
-			->setCategoryType(CategoryTypeState::Income)
-			->create();
+    public function test_asserts_wallet_balance_is_updated_when_category_was_changed_from_expense_to_income(): void
+    {
+        /** @var Category $incomeCategory */
+        $incomeCategory = Category::factory()
+            ->for($this->user)
+            ->setCategoryType(CategoryTypeState::Income)
+            ->create();
 
-		[$transaction, $wallet] = $this->generateTransaction();
+        [$transaction, $wallet] = $this->generateTransaction();
 
-		$attributes = [
-			'amount' => $transaction->amount,
-			'remarks' => $transaction->remarks,
-			'transaction_date' => $this->faker->date,
-			'wallet_id' => $wallet->id,
-			'category_id' => $incomeCategory->id,
-		];
+        $attributes = [
+            'amount' => $transaction->amount,
+            'remarks' => $transaction->remarks,
+            'transaction_date' => $this->faker->date,
+            'wallet_id' => $wallet->id,
+            'category_id' => $incomeCategory->id,
+        ];
 
-		$expectedCurrentBalance =
-			$wallet->current_balance + 2 * $transaction->amount;
+        $expectedCurrentBalance =
+            $wallet->current_balance + 2 * $transaction->amount;
 
-		$this->putJson(
-			"api/transaction/$transaction->uuid",
-			$attributes
-		)->assertStatus(Response::HTTP_OK);
+        $this->putJson(
+            "api/transaction/$transaction->uuid",
+            $attributes
+        )->assertOk();
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $wallet->id,
-			'current_balance' => $expectedCurrentBalance,
-		]);
-	}
+        $this->assertDatabaseHas('wallets', [
+            'id' => $wallet->id,
+            'current_balance' => $expectedCurrentBalance,
+        ]);
+    }
 
-	public function test_asserts_wallet_balance_is_updated_when_category_was_changed_from_income_to_expense(): void
-	{
-		/** @var Category $expenseCategory */
-		$expenseCategory = Category::factory()
-			->for($this->user)
-			->setCategoryType(CategoryTypeState::Expense)
-			->create();
+    public function test_asserts_wallet_balance_is_updated_when_category_was_changed_from_income_to_expense(): void
+    {
+        /** @var Category $expenseCategory */
+        $expenseCategory = Category::factory()
+            ->for($this->user)
+            ->setCategoryType(CategoryTypeState::Expense)
+            ->create();
 
-		[$transaction, $wallet] = $this->generateTransaction(
-			CategoryTypeState::Income
-		);
+        [$transaction, $wallet] = $this->generateTransaction(
+            CategoryTypeState::Income
+        );
 
-		$attributes = [
-			'amount' => $transaction->amount,
-			'remarks' => $transaction->remarks,
-			'transaction_date' => $this->faker->date,
-			'wallet_id' => $wallet->id,
-			'category_id' => $expenseCategory->id,
-		];
+        $attributes = [
+            'amount' => $transaction->amount,
+            'remarks' => $transaction->remarks,
+            'transaction_date' => $this->faker->date,
+            'wallet_id' => $wallet->id,
+            'category_id' => $expenseCategory->id,
+        ];
 
-		$expectedCurrentBalance =
-			$wallet->current_balance - 2 * $transaction->amount;
+        $expectedCurrentBalance =
+            $wallet->current_balance - 2 * $transaction->amount;
 
-		$this->putJson(
-			"api/transaction/$transaction->uuid",
-			$attributes
-		)->assertStatus(Response::HTTP_OK);
+        $this->putJson(
+            "api/transaction/$transaction->uuid",
+            $attributes
+        )->assertOk();
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $wallet->id,
-			'current_balance' => $expectedCurrentBalance,
-		]);
-	}
+        $this->assertDatabaseHas('wallets', [
+            'id' => $wallet->id,
+            'current_balance' => $expectedCurrentBalance,
+        ]);
+    }
 
-	public function test_asserts_wallet_balance_is_updated_when_amount_changes_from_expense_transaction(): void
-	{
-		[$transaction, $wallet, $category] = $this->generateTransaction();
+    public function test_asserts_wallet_balance_is_updated_when_amount_changes_from_expense_transaction(): void
+    {
+        [$transaction, $wallet, $category] = $this->generateTransaction();
 
-		$attributes = [
-			'amount' => $this->faker->numberBetween(),
-			'remarks' => $transaction->remarks,
-			'transaction_date' => $this->faker->date,
-			'wallet_id' => $wallet->id,
-			'category_id' => $category->id,
-		];
+        $attributes = [
+            'amount' => $this->faker->numberBetween(),
+            'remarks' => $transaction->remarks,
+            'transaction_date' => $this->faker->date,
+            'wallet_id' => $wallet->id,
+            'category_id' => $category->id,
+        ];
 
-		$expectedCurrentBalance =
-			$wallet->current_balance +
-			$transaction->amount -
-			$attributes['amount'];
+        $expectedCurrentBalance =
+            $wallet->current_balance +
+            $transaction->amount -
+            $attributes['amount'];
 
-		$this->putJson(
-			"api/transaction/$transaction->uuid",
-			$attributes
-		)->assertStatus(Response::HTTP_OK);
+        $this->putJson(
+            "api/transaction/$transaction->uuid",
+            $attributes
+        )->assertOk();
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $wallet->id,
-			'current_balance' => $expectedCurrentBalance,
-		]);
-	}
+        $this->assertDatabaseHas('wallets', [
+            'id' => $wallet->id,
+            'current_balance' => $expectedCurrentBalance,
+        ]);
+    }
 
-	public function test_asserts_wallet_balance_is_updated_when_amount_changes_from_income_transaction(): void
-	{
-		[$transaction, $wallet, $category] = $this->generateTransaction(
-			CategoryTypeState::Income
-		);
+    public function test_asserts_wallet_balance_is_updated_when_amount_changes_from_income_transaction(): void
+    {
+        [$transaction, $wallet, $category] = $this->generateTransaction(
+            CategoryTypeState::Income
+        );
 
-		$attributes = [
-			'amount' => $this->faker->numberBetween(),
-			'remarks' => $transaction->remarks,
-			'transaction_date' => $this->faker->date,
-			'wallet_id' => $wallet->id,
-			'category_id' => $category->id,
-		];
+        $attributes = [
+            'amount' => $this->faker->numberBetween(),
+            'remarks' => $transaction->remarks,
+            'transaction_date' => $this->faker->date,
+            'wallet_id' => $wallet->id,
+            'category_id' => $category->id,
+        ];
 
-		$expectedCurrentBalance =
-			$wallet->current_balance -
-			$transaction->amount +
-			$attributes['amount'];
+        $expectedCurrentBalance =
+            $wallet->current_balance -
+            $transaction->amount +
+            $attributes['amount'];
 
-		$this->putJson(
-			"api/transaction/$transaction->uuid",
-			$attributes
-		)->assertStatus(Response::HTTP_OK);
+        $this->putJson(
+            "api/transaction/$transaction->uuid",
+            $attributes
+        )->assertOk();
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $wallet->id,
-			'current_balance' => $expectedCurrentBalance,
-		]);
-	}
+        $this->assertDatabaseHas('wallets', [
+            'id' => $wallet->id,
+            'current_balance' => $expectedCurrentBalance,
+        ]);
+    }
 
-	public function test_asserts_wallet_balance_is_updated_when_wallet_was_changed_from_expense_transaction(): void
-	{
-		[$transaction, $wallet, $category] = $this->generateTransaction();
+    public function test_asserts_wallet_balance_is_updated_when_wallet_was_changed_from_expense_transaction(): void
+    {
+        [$transaction, $wallet, $category] = $this->generateTransaction();
 
-		/** @var Wallet $anotherWallet */
-		$anotherWallet = Wallet::factory()
-			->setWalletType(WalletTypeState::Cash)
-			->hasAttached($this->user, [
-				'access_type' => WalletAccessTypeState::Owner,
-			])
-			->create();
+        /** @var Wallet $anotherWallet */
+        $anotherWallet = Wallet::factory()
+            ->setWalletType(WalletTypeState::Cash)
+            ->hasAttached($this->user, [
+                'access_type' => WalletAccessTypeState::Owner,
+            ])
+            ->create();
 
-		$attributes = [
-			'amount' => $transaction->amount,
-			'remarks' => $transaction->remarks,
-			'transaction_date' => $this->faker->date,
-			'wallet_id' => $anotherWallet->id,
-			'category_id' => $category->id,
-		];
+        $attributes = [
+            'amount' => $transaction->amount,
+            'remarks' => $transaction->remarks,
+            'transaction_date' => $this->faker->date,
+            'wallet_id' => $anotherWallet->id,
+            'category_id' => $category->id,
+        ];
 
-		$this->putJson(
-			"api/transaction/$transaction->uuid",
-			$attributes
-		)->assertStatus(Response::HTTP_OK);
+        $this->putJson(
+            "api/transaction/$transaction->uuid",
+            $attributes
+        )->assertOk();
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $wallet->id,
-			'current_balance' =>
-				$wallet->current_balance + $transaction->amount,
-		]);
+        $this->assertDatabaseHas('wallets', [
+            'id' => $wallet->id,
+            'current_balance' =>
+                $wallet->current_balance + $transaction->amount,
+        ]);
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $anotherWallet->id,
-			'current_balance' =>
-				$anotherWallet->current_balance - $transaction->amount,
-		]);
-	}
+        $this->assertDatabaseHas('wallets', [
+            'id' => $anotherWallet->id,
+            'current_balance' =>
+                $anotherWallet->current_balance - $transaction->amount,
+        ]);
+    }
 
-	public function test_asserts_wallet_balance_is_updated_when_wallet_changes_from_income_transaction(): void
-	{
-		[$transaction, $wallet, $category] = $this->generateTransaction(
-			CategoryTypeState::Income
-		);
+    public function test_asserts_wallet_balance_is_updated_when_wallet_changes_from_income_transaction(): void
+    {
+        [$transaction, $wallet, $category] = $this->generateTransaction(
+            CategoryTypeState::Income
+        );
 
-		/** @var Wallet $anotherWallet */
-		$anotherWallet = Wallet::factory()
-			->setWalletType(WalletTypeState::Cash)
-			->hasAttached($this->user, [
-				'access_type' => WalletAccessTypeState::Owner,
-			])
-			->create();
+        /** @var Wallet $anotherWallet */
+        $anotherWallet = Wallet::factory()
+            ->setWalletType(WalletTypeState::Cash)
+            ->hasAttached($this->user, [
+                'access_type' => WalletAccessTypeState::Owner,
+            ])
+            ->create();
 
-		$attributes = [
-			'amount' => $transaction->amount,
-			'remarks' => $transaction->remarks,
-			'transaction_date' => $this->faker->date,
-			'wallet_id' => $anotherWallet->id,
-			'category_id' => $category->id,
-		];
+        $attributes = [
+            'amount' => $transaction->amount,
+            'remarks' => $transaction->remarks,
+            'transaction_date' => $this->faker->date,
+            'wallet_id' => $anotherWallet->id,
+            'category_id' => $category->id,
+        ];
 
-		$this->putJson(
-			"api/transaction/$transaction->uuid",
-			$attributes
-		)->assertStatus(Response::HTTP_OK);
+        $this->putJson(
+            "api/transaction/$transaction->uuid",
+            $attributes
+        )->assertOk();
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $wallet->id,
-			'current_balance' =>
-				$wallet->current_balance - $transaction->amount,
-		]);
+        $this->assertDatabaseHas('wallets', [
+            'id' => $wallet->id,
+            'current_balance' =>
+                $wallet->current_balance - $transaction->amount,
+        ]);
 
-		$this->assertDatabaseHas('wallets', [
-			'id' => $anotherWallet->id,
-			'current_balance' =>
-				$anotherWallet->current_balance + $transaction->amount,
-		]);
-	}
+        $this->assertDatabaseHas('wallets', [
+            'id' => $anotherWallet->id,
+            'current_balance' =>
+                $anotherWallet->current_balance + $transaction->amount,
+        ]);
+    }
 
-	private function generateTransaction(
-		CategoryTypeState $categoryType = CategoryTypeState::Expense
-	): array {
-		/** @var Wallet $wallet */
-		$wallet = Wallet::factory()
-			->setWalletType(WalletTypeState::Cash)
-			->hasAttached($this->user, [
-				'access_type' => WalletAccessTypeState::Owner,
-			])
-			->create();
+    private function generateTransaction(
+        CategoryTypeState $categoryType = CategoryTypeState::Expense
+    ): array {
+        /** @var Wallet $wallet */
+        $wallet = Wallet::factory()
+            ->setWalletType(WalletTypeState::Cash)
+            ->hasAttached($this->user, [
+                'access_type' => WalletAccessTypeState::Owner,
+            ])
+            ->create();
 
-		/** @var Category $category */
-		$category = Category::factory()
-			->for($this->user)
-			->setCategoryType($categoryType)
-			->create();
+        /** @var Category $category */
+        $category = Category::factory()
+            ->for($this->user)
+            ->setCategoryType($categoryType)
+            ->create();
 
-		/** @var Transaction $transaction */
-		$transaction = Transaction::factory()
-			->for($this->user)
-			->for($category)
-			->for($wallet)
-			->create();
+        /** @var Transaction $transaction */
+        $transaction = Transaction::factory()
+            ->for($this->user)
+            ->for($category)
+            ->for($wallet)
+            ->create();
 
-		return [$transaction, $wallet, $category];
-	}
+        return [$transaction, $wallet, $category];
+    }
 }
