@@ -8,7 +8,6 @@ enum CategoryTypeState: int
 {
     use EnumHelpers;
 
-    case Income = 1;
-    case Expense = 2;
-    case Debt = 3;
+    case Category = 21;
+    case Group = 22;
 }

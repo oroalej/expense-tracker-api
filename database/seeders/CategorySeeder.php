@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Actions\Category\CreateCategory;
-use App\DataObject\CategoryData;
+use App\DataTransferObjects\CategoryData;
 use App\Enums\CategoryTypeState;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -25,7 +25,7 @@ class CategorySeeder extends Seeder
 
         $this->dataCategories(
             $this->getIncomeCategories(),
-            CategoryTypeState::Expense
+            CategoryTypeState::Income
         );
         $this->dataCategories(
             $this->getExpenseCategories(),
@@ -49,11 +49,11 @@ class CategorySeeder extends Seeder
             $attributes['is_editable'] = $data['is_editable'] ?? true;
 
             $categoryData = new CategoryData(
-                $attributes['name'],
-                $categoryType,
-                null,
-                $parentId,
-                $attributes['is_editable']
+                name: $attributes['name'],
+                category_type_id: 1,
+                order: 0,
+                category_group_id: $parentId,
+                is_editable: $attributes['is_editable']
             );
 
             $category = (new CreateCategory(
@@ -111,31 +111,6 @@ class CategorySeeder extends Seeder
                     'Petrol',
                     'Taxi',
                 ],
-            ],
-            [
-                'name' => 'Shopping',
-                'children' => [
-                    'Accessories',
-                    'Clothing',
-                    'Electronics',
-                    'Footwear',
-                    'Grocery',
-                ],
-            ],
-            [
-                'name' => 'Entertainment',
-                'children' => ['Games', 'Movies'],
-            ],
-            'Health & Fitness',
-            'Insurance',
-            'Travel',
-            [
-                'name' => 'Withdrawal',
-                'is_editable' => false,
-            ],
-            [
-                'name' => 'Transfer',
-                'is_editable' => false,
             ],
         ];
     }

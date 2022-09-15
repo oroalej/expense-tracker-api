@@ -10,9 +10,7 @@ use Illuminate\Database\Eloquent\Model as LaravelModel;
  * App\Models\Model
  *
  * @property int $id
- * @method static Builder newModelQuery()
- * @method static Builder newQuery()
- * @method static Builder query()
+ * @mixin Builder
  * @mixin Eloquent
  */
 class Model extends LaravelModel

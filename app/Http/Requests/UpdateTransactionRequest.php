@@ -2,21 +2,19 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
-use App\Models\Wallet;
-use App\Rules\IsEntryExist;
+use App\Rules\IsDataExist;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * @property int $category_id
- * @property int $wallet_id
- * @property int $tag_id
- * @property string $amount
+ * @property string $account_id
+ * @property int $inflow
+ * @property int $outflow
  * @property string $remarks
- * @property array $tags
  * @property Carbon $transaction_date
  * @property-read Transaction $transaction
  */
@@ -29,7 +27,8 @@ class UpdateTransactionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Gate::allows('update', $this->transaction);
+        return true;
+        //        return Gate::allows('update', $this->transaction);
     }
 
     /**
@@ -40,23 +39,36 @@ class UpdateTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => 'required|integer',
-            'remarks' => 'required|max:191',
+            'inflow'           => ['nullable', 'regex:/^(?:[0-9]){1,9}(?:\.\d)?\d?$/'],
+            'outflow'          => [
+                'nullable',
+                'required_if:inflow,null',
+                'regex:/^(?:[0-9]){1,9}(?:\.\d)?\d?$/',
+            ],
+            'remarks'          => 'nullable|max:255',
             'transaction_date' => 'required|date|date_format:Y-m-d',
-            'category_id' => ['required', new IsEntryExist(Category::class)],
-            'wallet_id' => ['required', new IsEntryExist(Wallet::class)],
-            'tags' => ['nullable|array'],
+            'category_id'      => ['required', new IsDataExist(Category::class)],
+            'account_id'       => ['required', new IsDataExist(Account::class)],
+            'is_approved'      => ['nullable|boolean'],
+            'is_cleared'       => ['nullable|boolean'],
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'amount' => 'Amount',
-            'remarks' => 'Remarks',
+            'remarks'          => 'Remarks',
             'transaction_date' => 'Transaction Date',
-            'category_id' => 'Category',
-            'wallet_id' => 'Wallet',
+            'category_id'      => 'Category',
+            'account_id'       => 'Account',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'inflow.regex'  => __('validation.numeric'),
+            'outflow.regex' => __('validation.numeric'),
         ];
     }
 }

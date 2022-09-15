@@ -14,14 +14,15 @@ class UserAuthenticated implements Scope
     /**
      * Apply the scope to a given Eloquent query builder.
      *
-     * @param Builder $builder
-     * @param Model   $model
+     * @param  Builder  $builder
+     * @param  Model  $model
      * @return void
+     *
      * @throws AuthenticationException
      */
     public function apply(Builder $builder, Model $model): void
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             throw new AuthenticationException();
         }
 

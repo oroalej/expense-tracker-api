@@ -9,8 +9,8 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
 
 class NewPasswordController extends Controller
 {
@@ -19,6 +19,7 @@ class NewPasswordController extends Controller
      *
      * @param  Request  $request
      * @return Response
+     *
      * @throws ValidationException
      */
     public function __invoke(Request $request): Response

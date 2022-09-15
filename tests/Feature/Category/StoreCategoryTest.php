@@ -2,23 +2,27 @@
 
 namespace Category;
 
-use App\Enums\CategoryTypeState;
-use App\Models\Category;
-use App\Models\User;
+use App\Models\CategoryGroup;
+use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class StoreCategoryTest extends TestCase
 {
-    public string $url = 'api/category';
+    public string $url;
 
-    public User $user;
+    public CategoryGroup $categoryGroup;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        /** @var CategoryGroup $categoryGroup */
+        $this->categoryGroup = CategoryGroup::factory()
+            ->for($this->ledger)
+            ->create();
+
+        $this->url = "api/category-groups/{$this->categoryGroup->uuid}/categories";
     }
 
     public function test_asserts_guest_not_allowed(): void
@@ -29,129 +33,109 @@ class StoreCategoryTest extends TestCase
     public function test_assert_name_field_is_required(): void
     {
         $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
             ->postJson($this->url)
             ->assertJsonValidationErrors('name');
     }
 
-    public function test_asserts_name_field_is_not_too_long(): void
+    public function test_assert_name_has_255_characters_max_length(): void
     {
         $this->actingAs($this->user)
-            ->postJson($this->url, ['name' => Str::random(192)])
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->postJson($this->url, [
+                'name' => Str::random(Builder::$defaultStringLength),
+            ])
+            ->assertJsonMissingValidationErrors('name');
+    }
+
+    public function test_asserts_name_field_is_not_more_than_255_characters(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->postJson($this->url, [
+                'name' => Str::random(Builder::$defaultStringLength + 1),
+            ])
             ->assertJsonValidationErrors('name');
     }
 
-    public function test_asserts_description_is_not_too_long(): void
+    public function test_assert_notes_has_255_characters_max_length(): void
     {
         $this->actingAs($this->user)
-            ->postJson($this->url, ['description' => Str::random(192)])
-            ->assertJsonValidationErrors('description');
-    }
-
-    public function test_asserts_category_type_field_is_required(): void
-    {
-        $this->actingAs($this->user)
-            ->postJson($this->url)
-            ->assertJsonValidationErrors('category_type');
-    }
-
-    public function test_asserts_only_valid_value_allowed_in_category_type(): void
-    {
-        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
             ->postJson($this->url, [
-                'category_type' => 9999999,
+                'notes' => Str::random(Builder::$defaultStringLength),
             ])
-            ->assertJsonValidationErrors('category_type');
+            ->assertJsonMissingValidationErrors('notes');
     }
 
-    public function test_asserts_parent_field_is_optional(): void
+    public function test_asserts_notes_is_not_more_than_255_characters(): void
     {
         $this->actingAs($this->user)
-            ->postJson($this->url)
-            ->assertJsonMissingValidationErrors('parent_id');
-    }
-
-    public function test_asserts_parent_id_is_valid(): void
-    {
-        $this->actingAs($this->user)
-            ->postJson($this->url, ['parent_id' => 9999999])
-            ->assertJsonValidationErrors('parent_id');
-    }
-
-    public function test_asserts_only_own_category_can_be_attached_to_parent_field(): void
-    {
-        /** @var Category $anotherUserCategory */
-        $anotherUserCategory = Category::factory()
-            ->for(User::factory()->create())
-            ->setCategoryType(CategoryTypeState::Debt)
-            ->create();
-
-        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
             ->postJson($this->url, [
-                'category_type' => CategoryTypeState::Expense,
-                'parent_id' => $anotherUserCategory->id,
+                'notes' => Str::random(Builder::$defaultStringLength + 1),
             ])
-            ->assertJsonValidationErrors('parent_id');
-    }
-
-    public function test_asserts_parent_and_child_category_type_are_the_same(): void
-    {
-        /** @var Category $anotherCategory */
-        $anotherCategory = Category::factory()
-            ->for($this->user)
-            ->setCategoryType(CategoryTypeState::Debt)
-            ->create();
-
-        $this->actingAs($this->user)
-            ->postJson($this->url, [
-                'category_type' => CategoryTypeState::Income->value,
-                'parent_id' => $anotherCategory->id,
-            ])
-            ->assertJsonValidationErrors('parent_id');
+            ->assertJsonValidationErrors('notes');
     }
 
     public function test_asserts_user_can_create_category(): void
     {
         $attributes = [
-            'name' => $this->faker->word,
-            'description' => $this->faker->sentence,
-            'category_type' => CategoryTypeState::Debt->value,
+            'name'              => $this->faker->word,
+            'notes'             => $this->faker->sentence,
+            'category_group_id' => $this->categoryGroup->uuid
         ];
 
         $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
             ->postJson($this->url, $attributes)
             ->assertCreated();
 
         $this->assertDatabaseCount('categories', 1);
         $this->assertDatabaseHas('categories', [
-            'name' => $attributes['name'],
-            'category_type' => $attributes['category_type'],
+            'name'              => $attributes['name'],
+            'category_group_id' => $this->categoryGroup->id
         ]);
     }
 
-    public function test_asserts_user_can_create_category_with_parent(): void
+    public function test_create_category_is_not_hidden(): void
     {
-        /** @var Category $anotherCategory */
-        $anotherCategory = Category::factory()
-            ->for($this->user)
-            ->setCategoryType(CategoryTypeState::Debt)
-            ->create();
-
         $attributes = [
-            'name' => $this->faker->word,
-            'description' => $this->faker->sentence,
-            'category_type' => CategoryTypeState::Debt->value,
-            'parent_id' => $anotherCategory->id,
+            'name'              => $this->faker->word,
+            'notes'             => $this->faker->sentence,
+            'category_group_id' => $this->categoryGroup->uuid
         ];
 
         $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
             ->postJson($this->url, $attributes)
             ->assertCreated();
 
-        $this->assertDatabaseCount('categories', 2);
+        $this->assertDatabaseCount('categories', 1);
         $this->assertDatabaseHas('categories', [
-            'name' => $attributes['name'],
-            'category_type' => $attributes['category_type'],
-            'parent_id' => $attributes['parent_id'],
+            'name'              => $attributes['name'],
+            'is_hidden'         => false,
+            'category_group_id' => $this->categoryGroup->id
         ]);
+    }
+
+    public function test_assert_api_has_correct_structure(): void
+    {
+        $attributes = [
+            'name'              => $this->faker->word,
+            'notes'             => $this->faker->sentence,
+            'category_group_id' => $this->categoryGroup->uuid,
+        ];
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->postJson($this->url, $attributes)
+            ->assertJsonStructure([
+                'name',
+                'notes',
+                'created_at',
+                'updated_at',
+                'deleted_at',
+            ]);
     }
 }

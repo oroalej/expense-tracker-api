@@ -6,8 +6,8 @@ use Database\Factories\UserFactory;
 use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -19,7 +19,6 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $name
  * @property string $password
  * @property string $remember_token
- *
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
@@ -31,7 +30,9 @@ use Laravel\Sanctum\HasApiTokens;
  */
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens;
+    use HasFactory;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -56,21 +57,18 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
-    public function categories(): HasMany
+    public function ledgers(): HasMany
     {
-        return $this->hasMany(Category::class);
+        return $this->hasMany(Ledger::class);
     }
 
-    public function tags(): HasMany
+    public function categories(): HasManyThrough
     {
-        return $this->hasMany(Tag::class);
+        return $this->hasManyThrough(Category::class, Ledger::class);
     }
 
-    public function wallets(): BelongsToMany
+    public function accounts(): HasManyThrough
     {
-        return $this->belongsToMany(Wallet::class)
-            ->using(UserWallet::class)
-            ->withPivot('start_date', 'end_date', 'access_type')
-            ->as('permissions');
+        return $this->hasManyThrough(Account::class, Ledger::class);
     }
 }

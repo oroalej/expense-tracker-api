@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\CategoryTypeState;
+use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class CategoryFactory extends Factory
 {
+    protected $model = Category::class;
+
     /**
      * Define the model's default state.
      *
@@ -19,38 +21,14 @@ class CategoryFactory extends Factory
     {
         return [
             'name' => $this->faker->word,
-            'description' => $this->faker->sentence,
-            'category_type' => $this->faker->randomElement(
-                CategoryTypeState::getValues()
-            ),
+            'notes' => $this->faker->sentence,
         ];
     }
 
-    public function setCategoryType(
-        CategoryTypeState $categoryType
-    ): CategoryFactory {
-        return $this->state(function () use ($categoryType) {
-            return [
-                'category_type' => $categoryType->value,
-            ];
-        });
-    }
-
-    public function isDefault(): CategoryFactory
+    public function hidden(): CategoryFactory
     {
-        return $this->state(function () {
-            return [
-                'is_default' => true,
-            ];
-        });
-    }
-
-    public function isNotEditable(): CategoryFactory
-    {
-        return $this->state(function () {
-            return [
-                'is_editable' => false,
-            ];
-        });
+        return $this->state(fn () => [
+            'is_hidden' => true,
+        ]);
     }
 }

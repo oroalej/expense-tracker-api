@@ -2,60 +2,47 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\CategoryTypeState;
-use App\Models\Category;
-use App\Rules\IsEntryExist;
-use App\Rules\IsSameCategoryType;
+use App\Models\Ledger;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
 
 /**
- * @property int    $parent_id
+ * @property int $category_group_id
  * @property string $name
- * @property string $description
- * @property int    $category_type
+ * @property string $notes
+ * @property Ledger $ledger
  */
 class StoreCategoryRequest extends FormRequest
 {
-	/**
-	 * Determine if the user is authorized to make this request.
-	 *
-	 * @return bool
-	 */
-	public function authorize(): bool
-	{
-		return true;
-	}
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
 
-	/**
-	 * Get the validation rules that apply to the request.
-	 *
-	 * @return array
-	 */
-	public function rules(): array
-	{
-		return [
-			'name'          => 'required|max:191',
-			'description'   => 'nullable|max:191',
-			'category_type' => [
-				'required',
-				new Enum( CategoryTypeState::class )
-			],
-			'parent_id'     => [
-				'nullable',
-				new IsEntryExist( Category::class ),
-				new IsSameCategoryType( $this->get( 'category_type' ) )
-			],
-		];
-	}
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => 'required|max:255',
+            'notes' => 'nullable|max:255',
+            'category_group_id'=> 'required|exists:App\Models\CategoryGroup,uuid'
+        ];
+    }
 
-	public function attributes(): array
-	{
-		return [
-			'name'          => 'Name',
-			'description'   => 'Description',
-			'parent_id'     => 'Parent',
-			'category_type' => 'Type',
-		];
-	}
+    public function attributes(): array
+    {
+        return [
+            'name' => 'Name',
+            'notes' => 'Notes',
+            'category_group_id' => 'Category Group'
+        ];
+    }
 }

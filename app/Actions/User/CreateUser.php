@@ -2,7 +2,7 @@
 
 namespace App\Actions\User;
 
-use App\DataObject\UserData;
+use App\DataTransferObjects\UserData;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;

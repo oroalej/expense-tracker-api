@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\User\CreateUser;
-use App\DataObject\UserData;
+use App\DataTransferObjects\UserData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\JsonResponse;

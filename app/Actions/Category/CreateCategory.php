@@ -2,34 +2,25 @@
 
 namespace App\Actions\Category;
 
-use App\DataObject\CategoryData;
+use App\DataTransferObjects\CategoryData;
 use App\Models\Category;
-use App\Models\User;
+use DB;
+use Throwable;
 
 class CreateCategory
 {
-    public function __construct(
-        protected CategoryData $attributes,
-        protected User $user
-    ) {
-    }
-
-    public function execute(): Category
+    /**
+     * @throws Throwable
+     */
+    public function execute(CategoryData $attributes): Category
     {
-        $category = new Category([
-            'name' => $this->attributes->name,
-            'description' => $this->attributes->description,
-            'category_type' => $this->attributes->category_type->value,
-        ]);
+        return DB::transaction(static function () use ($attributes) {
+            $category = new Category($attributes->toArray());
 
-        $category->user()->associate($this->user);
+            $category->categoryGroup()->associate($attributes->categoryGroup);
+            $category->save();
 
-        if ($this->attributes->parent_id) {
-            $category->parent()->associate($this->attributes->parent_id);
-        }
-
-        $category->save();
-
-        return $category;
+            return $category;
+        });
     }
 }

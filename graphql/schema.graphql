@@ -1,7 +1,7 @@
 scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
 scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
 
-type Query @guard {
+type Query {
     category(id: ID! @eq): Category @find
     categories(
         category_type: CategoryTypeState @eq(key: "category_type")
@@ -42,7 +42,7 @@ type User @model(class: "\\App\\Models\\User") {
 type Tag @model(class: "\\App\\Models\\Tag") {
     id: ID!
     name: String!
-    description: String!
+    description: String
 
     user_id: ID!
 

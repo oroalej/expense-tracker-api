@@ -3,7 +3,7 @@
 namespace App\Listeners\Registered;
 
 use App\Actions\Wallet\CreateWallet;
-use App\DataObject\WalletData;
+use App\DataTransferObjects\WalletData;
 use App\Enums\WalletTypeState;
 use Illuminate\Auth\Events\Registered;
 use Throwable;
@@ -15,6 +15,7 @@ class CreateCashWallet
      *
      * @param  Registered  $event
      * @return void
+     *
      * @throws Throwable
      */
     public function handle(Registered $event): void

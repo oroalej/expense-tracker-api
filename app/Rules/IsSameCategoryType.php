@@ -19,8 +19,8 @@ class IsSameCategoryType implements Rule
     /**
      * Determine if the validation rule passes.
      *
-     * @param string   $attribute
-     * @param int|null $value
+     * @param  string  $attribute
+     * @param  int|null  $value
      * @return bool
      */
     public function passes($attribute, $value): bool

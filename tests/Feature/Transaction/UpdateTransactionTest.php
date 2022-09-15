@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Transaction;
 
-use App\Enums\CategoryTypeState;
-use App\Enums\WalletAccessTypeState;
+use App\Enums\AccountTypeState;
+use App\Models\Account;
+use App\Models\AccountType;
 use App\Models\Category;
+use App\Models\CategoryGroup;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Wallet;
+use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -15,194 +17,260 @@ class UpdateTransactionTest extends TestCase
 {
     public string $url;
 
-    public User $user;
-
     public Transaction $transaction;
+
+    public Account $account;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $cashAccountType = AccountType::find(AccountTypeState::Cash->value);
 
-        $category = Category::factory()
-            ->for($this->user)
-            ->setCategoryType(CategoryTypeState::Income)
-            ->create();
-
-        $wallet = Wallet::factory()
-            ->hasAttached($this->user, [
-                'access_type' => WalletAccessTypeState::Owner,
-            ])
+        /** @var Account $account */
+        $this->account = Account::factory()
+            ->for($this->ledger)
+            ->for($cashAccountType)
             ->create();
 
         $this->transaction = Transaction::factory()
-            ->for($this->user)
-            ->for($category)
-            ->for($wallet)
+            ->for(
+                Category::factory()->for(
+                    CategoryGroup::factory()->for($this->ledger)
+                )
+            )
+            ->for($this->account)
+            ->setOutflow()
             ->create();
 
-        $this->url = "api/transaction/{$this->transaction->uuid}";
+        $this->url = "api/accounts/{$this->account->uuid}/transactions/{$this->transaction->uuid}";
     }
 
-    public function test_asserts_guest_are_not_allowed(): void
+    public function test_guest_are_not_allowed(): void
     {
         $this->putJson($this->url)->assertUnauthorized();
     }
 
-    public function test_asserts_amount_field_is_required(): void
+    public function test_user_can_only_access_own_data(): void
     {
-        $this->actingAs($this->user)
-            ->putJson($this->url)
-            ->assertJsonValidationErrors('amount');
-    }
+        $anotherUser = User::factory()->create();
 
-    public function test_asserts_amount_field_only_accept_number(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url, [
-                'amount' => 'amount',
-            ])
-            ->assertJsonValidationErrors('amount');
-
-        $this->actingAs($this->user)
-            ->putJson($this->url, [
-                'amount' => '1111jj23',
-            ])
-            ->assertJsonValidationErrors('amount');
-    }
-
-    public function test_asserts_remarks_field_is_required(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url)
-            ->assertJsonValidationErrors('remarks');
-    }
-
-    public function test_asserts_remarks_field_not_too_long(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url, ['remarks' => Str::random(192)])
-            ->assertJsonValidationErrors('remarks');
-    }
-
-    public function test_asserts_transaction_date_is_required(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url)
-            ->assertJsonValidationErrors('transaction_date');
-    }
-
-    public function test_asserts_transaction_date_only_accept_date(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url, ['transaction_date' => 'transaction_date'])
-            ->assertJsonValidationErrors('transaction_date');
-    }
-
-    public function test_asserts_transaction_date_has_correct_format(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url, ['transaction_date' => '01-31-2022'])
-            ->assertJsonValidationErrors('transaction_date');
-    }
-
-    public function test_asserts_category_is_required(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url)
-            ->assertJsonValidationErrors('category_id');
-    }
-
-    public function test_asserts_only_own_category_can_be_used(): void
-    {
-        /** @var Category $category */
-        $category = Category::factory()
-            ->for(User::factory()->create())
-            ->create();
-
-        $this->actingAs($this->user)
-            ->putJson($this->url, ['category_id' => $category->id])
-            ->assertJsonValidationErrors('category_id');
-    }
-
-    public function test_asserts_wallet_is_required(): void
-    {
-        $this->actingAs($this->user)
-            ->putJson($this->url)
-            ->assertJsonValidationErrors('wallet_id');
-    }
-
-    public function test_asserts_only_own_wallet_can_be_used(): void
-    {
-        /** @var Wallet $wallet */
-        $wallet = Wallet::factory()
-            ->hasAttached(User::factory()->create(), [
-                'access_type' => WalletAccessTypeState::Owner->value,
-            ])
-            ->create();
-
-        $this->actingAs($this->user)
-            ->putJson($this->url, ['wallet_id' => $wallet->id])
-            ->assertJsonValidationErrors('wallet_id');
-    }
-
-    public function test_asserts_only_owner_of_the_transaction_can_update_the_data(): void
-    {
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($anotherUser)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
             ->putJson($this->url)
             ->assertNotFound();
     }
 
-    public function test_asserts_user_can_update_own_transaction(): void
+    public function test_account_is_required(): void
     {
-        $attributes = [
-            'amount' => $this->faker->numberBetween(),
-            'remarks' => $this->faker->sentence,
-            'transaction_date' => $this->faker->date,
-            'category_id' => $this->transaction->category_id,
-            'wallet_id' => $this->transaction->wallet_id,
-        ];
-
         $this->actingAs($this->user)
-            ->putJson($this->url, $attributes)
-            ->assertOk();
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url)
+            ->assertJsonValidationErrors('account_id');
     }
 
-    public function test_asserts_changes_reflected_in_database(): void
+    public function test_account_is_valid(): void
     {
-        /** @var Category $category */
-        $category = Category::factory()
-            ->for($this->user)
-            ->setCategoryType(CategoryTypeState::Income)
-            ->create();
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['account_id' => 999999999])
+            ->assertJsonValidationErrors('account_id');
+    }
 
-        /** @var Wallet $wallet */
-        $wallet = Wallet::factory()
-            ->hasAttached($this->user, [
-                'access_type' => WalletAccessTypeState::Owner,
+    public function test_category_is_required(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url)
+            ->assertJsonValidationErrors('category_id');
+    }
+
+    public function test_category_is_valid(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['category_id' => 999999999])
+            ->assertJsonValidationErrors('category_id');
+    }
+
+    public function test_remarks_is_optional(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url)
+            ->assertJsonMissingValidationErrors('remarks');
+    }
+
+    public function test_remarks_is_not_more_than_255_characters(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, [
+                'remarks' => Str::random(Builder::$defaultStringLength + 1),
             ])
-            ->create();
+            ->assertJsonValidationErrors('remarks');
+    }
 
+    public function test_transaction_date_is_required(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url)
+            ->assertJsonValidationErrors('transaction_date');
+    }
+
+    public function test_transaction_date_is_in_correct_format(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['transaction_date' => '12-31-2022'])
+            ->assertJsonValidationErrors('transaction_date');
+    }
+
+    public function test_transaction_date_is_valid(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['transaction_date' => '2022-13-31'])
+            ->assertJsonValidationErrors('transaction_date');
+    }
+
+    public function test_is_approved_is_optional(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url)
+            ->assertJsonMissingValidationErrors('is_approved');
+    }
+
+    public function test_is_cleared_is_optional(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url)
+            ->assertJsonMissingValidationErrors('is_cleared');
+    }
+
+    public function test_either_one_of_inflow_or_outflow_is_required(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, [
+                'inflow' => null,
+            ])
+            ->assertJsonValidationErrors('outflow');
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['outflow' => 99999])
+            ->assertJsonMissingValidationErrors('outflow')
+            ->assertJsonMissingValidationErrors('inflow');
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['inflow' => 99999])
+            ->assertJsonMissingValidationErrors('outflow')
+            ->assertJsonMissingValidationErrors('inflow');
+    }
+
+    public function test_inflow_and_outflow_only_accept_number(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['outflow' => 'Hello Code Reviewer :)'])
+            ->assertJsonValidationErrors('outflow');
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, ['inflow' => 'Hello Code Reviewer :)'])
+            ->assertJsonValidationErrors('inflow');
+    }
+
+    public function test_inflow_and_outflow_accepts_decimals(): void
+    {
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, [
+                'outflow' => $this->faker->randomFloat(2, 1, 999999),
+            ])
+            ->assertJsonMissingValidationErrors('outflow');
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, [
+                'inflow' => $this->faker->randomFloat(2, 1, 999999),
+            ])
+            ->assertJsonMissingValidationErrors('inflow');
+    }
+
+    public function test_inflow_and_outflow_only_accept_10_digits(): void
+    {
+        $elevenDigits = 99999999999;
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, [
+                'outflow' => $elevenDigits,
+            ])
+            ->assertJsonValidationErrors('outflow');
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, [
+                'inflow' => $elevenDigits,
+            ])
+            ->assertJsonValidationErrors('inflow');
+    }
+
+    public function test_user_can_update_own_transaction(): void
+    {
         $attributes = [
-            'amount' => $this->faker->numberBetween(),
-            'remarks' => $this->faker->sentence,
+            'inflow'           => $this->transaction->inflow,
+            'outflow'          => $this->faker->randomFloat(2, 1, 999999),
+            'remarks'          => $this->faker->sentence,
             'transaction_date' => $this->faker->date,
-            'category_id' => $category->id,
-            'wallet_id' => $wallet->id,
+            'category_id'      => $this->transaction->category->uuid,
+            'account_id'       => $this->account->uuid,
         ];
 
         $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
             ->putJson($this->url, $attributes)
             ->assertOk();
 
-        $this->assertDatabaseCount('transactions', 1);
         $this->assertDatabaseHas('transactions', [
-            'id' => $this->transaction->id,
-            'amount' => $attributes['amount'],
-            'remarks' => $attributes['remarks'],
-            'category_id' => $attributes['category_id'],
-            'wallet_id' => $attributes['wallet_id'],
+            'id'               => $this->transaction->id,
+            'outflow'          => $attributes['outflow'],
+            'remarks'          => $attributes['remarks'],
+            'transaction_date' => $attributes['transaction_date'],
         ]);
+    }
+
+    public function test_api_structure_is_correct(): void
+    {
+        $attributes = [
+            'inflow'           => $this->transaction->inflow,
+            'outflow'          => $this->faker->randomFloat(2, 1, 999999),
+            'remarks'          => $this->faker->sentence,
+            'transaction_date' => $this->faker->date,
+            'category_id'      => $this->transaction->category->uuid,
+            'account_id'       => $this->account->uuid,
+        ];
+
+        $this->actingAs($this->user)
+            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->putJson($this->url, $attributes)
+            ->assertOk()
+            ->assertJsonStructure([
+                'id',
+                'remarks',
+                'outflow',
+                'inflow',
+                'transaction_date',
+                'is_approved',
+                'is_cleared',
+                'created_at',
+                'updated_at',
+            ]);
     }
 }

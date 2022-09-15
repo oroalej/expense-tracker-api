@@ -195,11 +195,9 @@ return [
     */
 
     'security' => [
-        'max_query_complexity' =>
-            \GraphQL\Validator\Rules\QueryComplexity::DISABLED,
+        'max_query_complexity' => \GraphQL\Validator\Rules\QueryComplexity::DISABLED,
         'max_query_depth' => \GraphQL\Validator\Rules\QueryDepth::DISABLED,
-        'disable_introspection' =>
-            \GraphQL\Validator\Rules\DisableIntrospection::DISABLED,
+        'disable_introspection' => \GraphQL\Validator\Rules\DisableIntrospection::DISABLED,
     ],
 
     /*
@@ -461,8 +459,7 @@ return [
             ],
             'pusher' => [
                 'driver' => 'pusher',
-                'routes' =>
-                    \Nuwave\Lighthouse\Subscriptions\SubscriptionRouter::class .
+                'routes' => \Nuwave\Lighthouse\Subscriptions\SubscriptionRouter::class.
                     '@pusher',
                 'connection' => 'pusher',
             ],
@@ -472,8 +469,7 @@ return [
                     'LIGHTHOUSE_SUBSCRIPTION_REDIS_CONNECTION',
                     'default'
                 ),
-                'routes' =>
-                    \Nuwave\Lighthouse\Subscriptions\SubscriptionRouter::class .
+                'routes' => \Nuwave\Lighthouse\Subscriptions\SubscriptionRouter::class.
                     '@echoRoutes',
             ],
         ],
