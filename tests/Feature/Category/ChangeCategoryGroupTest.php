@@ -8,7 +8,7 @@ use App\Models\Ledger;
 use App\Models\User;
 use Tests\TestCase;
 
-class CategoryGroupUpdateTest extends TestCase
+class ChangeCategoryGroupTest extends TestCase
 {
     public string   $url;
     public Category $category;
@@ -22,7 +22,7 @@ class CategoryGroupUpdateTest extends TestCase
                 ->for($this->ledger))
             ->create();
 
-        $this->url = "api/categories/{$this->category->uuid}/category-group-update";
+        $this->url = "api/categories/{$this->category->uuid}/change-category-group";
     }
 
     public function test_guest_not_allowed(): void

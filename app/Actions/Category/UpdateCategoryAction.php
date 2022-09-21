@@ -5,7 +5,7 @@ namespace App\Actions\Category;
 use App\DataTransferObjects\CategoryData;
 use App\Models\Category;
 
-class UpdateCategory
+class UpdateCategoryAction
 {
     public function execute(
         Category $category,

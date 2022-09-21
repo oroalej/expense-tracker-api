@@ -77,8 +77,8 @@ Route::middleware('auth:sanctum')->group(static function () {
             ->group(static function () {
                 Route::post('hide', HideCategoryController::class)->name('hide');
                 Route::post('unhide', UnhideCategoryController::class)->name('unhide');
-                Route::post('category-group-update', ChangeCategoryGroupController::class)
-                    ->name('category-group-update');
+                Route::post('change-category-group', ChangeCategoryGroupController::class)
+                    ->name('change-category-group');
             });
 
         Route::prefix('transactions/{transaction}')

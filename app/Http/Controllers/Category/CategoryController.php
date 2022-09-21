@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Category;
 
 use App\Actions\Category\CreateCategoryAction;
-use App\Actions\Category\UpdateCategory;
+use App\Actions\Category\UpdateCategoryAction;
 use App\DataTransferObjects\CategoryData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCategoryRequest;
@@ -43,10 +43,13 @@ class CategoryController extends Controller
         CreateCategoryAction $createCategory,
         CategoryGroup $categoryGroup
     ): JsonResponse {
+        $order = $categoryGroup->categories()->count();
+        
         $category = $createCategory->execute(
             new CategoryData(
                 name: $request->name,
                 notes: $request->notes,
+                order: $order + 1,
                 categoryGroup: $categoryGroup
             )
         );
@@ -63,20 +66,21 @@ class CategoryController extends Controller
      * @param  UpdateCategoryRequest  $request
      * @param  CategoryGroup  $categoryGroup
      * @param  Category  $category
-     * @param  UpdateCategory  $updateCategory
+     * @param  UpdateCategoryAction  $updateCategory
      * @return JsonResponse
      */
     public function update(
         UpdateCategoryRequest $request,
         CategoryGroup $categoryGroup,
         Category $category,
-        UpdateCategory $updateCategory
+        UpdateCategoryAction $updateCategory
     ): JsonResponse {
         $category = $updateCategory->execute(
             $category,
             new CategoryData(
                 name: $request->name,
                 notes: $request->notes,
+                order: $category->order,
                 categoryGroup: $categoryGroup
             )
         );

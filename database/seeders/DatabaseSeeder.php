@@ -16,9 +16,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             TaxonomySeeder::class,
             TermSeeder::class,
-            CategorySeeder::class,
             AccountTypesSeeder::class
-//            AccountTypesSeeder::class,
 //            CurrencySeeder::class,
         ]);
     }

@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property int $category_group_id
  * @property string $name
  * @property string $notes
+ * @property int $order
  * @property bool $is_hidden
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at

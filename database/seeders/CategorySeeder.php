@@ -21,27 +21,29 @@ class CategorySeeder extends Seeder
      */
     public function run(Ledger $ledger): void
     {
-        foreach ($this->getData() as $group) {
+        foreach ($this->getData() as $index =>$group) {
             $categoryGroup = (new CreateCategoryGroupAction())->execute(
                 new CategoryGroupData(
                     name: $group['name'],
                     notes: null,
+                    order: $index + 1,
                     ledger: $ledger
                 )
             );
-            
-            foreach ($group['children'] as $categoryName) {
+
+            foreach ($group['children'] as $order => $categoryName) {
                 (new CreateCategoryAction())->execute(
                     new CategoryData(
                         name: $categoryName,
                         notes: null,
+                        order: $order + 1,
                         categoryGroup: $categoryGroup
                     )
                 );
             }
         }
     }
-    
+
     public function getData(): array
     {
         return [

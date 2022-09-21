@@ -19,9 +19,12 @@ class CategoryGroupFactory extends Factory
      */
     public function definition(): array
     {
+        $categoryGroupCount = CategoryGroup::count();
+
         return [
-            'name' => $this->faker->word,
+            'name'  => $this->faker->word,
             'notes' => $this->faker->sentence,
+            'order' => $categoryGroupCount + 1
         ];
     }
 

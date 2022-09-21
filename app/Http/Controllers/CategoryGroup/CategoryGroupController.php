@@ -37,10 +37,13 @@ class CategoryGroupController extends Controller
         StoreCategoryGroupRequest $request,
         CreateCategoryGroupAction $createCategoryGroup
     ): JsonResponse {
+        $order = CategoryGroup::count();
+        
         $categoryGroup = $createCategoryGroup->execute(
             new CategoryGroupData(
                 name: $request->name,
                 notes: $request->notes,
+                order: $order + 1,
                 ledger: $request->ledger
             )
         );
@@ -69,6 +72,7 @@ class CategoryGroupController extends Controller
             new CategoryGroupData(
                 name: $request->name,
                 notes: $request->notes,
+                order: $categoryGroup->order,
                 ledger: $request->ledger
             )
         );

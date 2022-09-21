@@ -23,7 +23,7 @@ class FactorySeeder extends Seeder
                     ->count(2)
                     ->has(
                         CategoryGroup::factory()
-                            ->has(Category::factory()->count(1))
+                            ->has(Category::factory()->count(5))
                             ->count(2)
                     )
             )

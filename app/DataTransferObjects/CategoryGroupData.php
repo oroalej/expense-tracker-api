@@ -9,7 +9,8 @@ class CategoryGroupData
     public function __construct(
         public readonly string $name,
         public readonly ?string $notes,
-        public readonly Ledger $ledger
+        public readonly int $order,
+        public readonly Ledger $ledger,
     ) {
     }
 
@@ -18,6 +19,7 @@ class CategoryGroupData
         return [
             'name' => $this->name,
             'notes' => $this->notes,
+            'order' => $this->order,
         ];
     }
 }
