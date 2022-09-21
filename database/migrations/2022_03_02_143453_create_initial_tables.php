@@ -81,6 +81,7 @@ return new class () extends Migration {
                 $table->string('name');
                 $table->string('notes')->nullable();
                 $table->boolean('is_hidden')->default(false);
+                $table->tinyInteger('order');
                 $table->timestamps();
                 $table->softDeletes();
 
@@ -99,6 +100,7 @@ return new class () extends Migration {
                 $table->string('name');
                 $table->string('notes')->nullable();
                 $table->boolean('is_hidden')->default(false);
+                $table->tinyInteger('order');
 
                 $table->timestamps();
                 $table->softDeletes();

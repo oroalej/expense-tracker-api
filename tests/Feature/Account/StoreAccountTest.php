@@ -85,11 +85,11 @@ class StoreAccountTest extends TestCase
 
     public function test_assert_user_can_create_account(): void
     {
-        $account = AccountType::first();
+        $accountType = AccountType::first();
 
         $attributes = [
             'name'            => $this->faker->word,
-            'account_type_id' => $account->uuid,
+            'account_type_id' => $accountType->uuid,
             'current_balance' => $this->faker->numberBetween(1, 999999),
         ];
 
@@ -102,17 +102,17 @@ class StoreAccountTest extends TestCase
         $this->assertDatabaseHas('accounts', [
             'name'            => $attributes['name'],
             'ledger_id'       => $this->ledger->id,
-            'account_type_id' => $account->id
+            'account_type_id' => $accountType->id
         ]);
     }
 
     public function created_account_is_not_archived(): void
     {
-        $account = AccountType::first();
+        $accountType = AccountType::first();
 
         $attributes = [
             'name'            => $this->faker->word,
-            'account_type_id' => $account->uuid,
+            'account_type_id' => $accountType->uuid,
             'current_balance' => $this->faker->numberBetween(1, 999999),
         ];
 
@@ -128,11 +128,11 @@ class StoreAccountTest extends TestCase
 
     public function test_assert_correct_api_structure(): void
     {
-        $account = AccountType::first();
+        $accountType = AccountType::first();
 
         $attributes = [
             'name'            => $this->faker->word,
-            'account_type_id' => $account->uuid,
+            'account_type_id' => $accountType->uuid,
             'current_balance' => $this->faker->numberBetween(1, 999999),
         ];
 

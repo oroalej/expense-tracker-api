@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Category;
 
-use App\Actions\Category\CreateCategory;
+use App\Actions\Category\CreateCategoryAction;
 use App\Actions\Category\UpdateCategory;
 use App\DataTransferObjects\CategoryData;
 use App\Http\Controllers\Controller;
@@ -33,14 +33,14 @@ class CategoryController extends Controller
      * Store a newly created resource in storage.
      *
      * @param  StoreCategoryRequest  $request
-     * @param  CreateCategory  $createCategory
+     * @param  CreateCategoryAction  $createCategory
      * @param  CategoryGroup  $categoryGroup
      * @return JsonResponse
      * @throws Throwable
      */
     public function store(
         StoreCategoryRequest $request,
-        CreateCategory $createCategory,
+        CreateCategoryAction $createCategory,
         CategoryGroup $categoryGroup
     ): JsonResponse {
         $category = $createCategory->execute(

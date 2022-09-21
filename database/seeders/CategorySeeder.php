@@ -2,96 +2,51 @@
 
 namespace Database\Seeders;
 
-use App\Actions\Category\CreateCategory;
+use App\Actions\Category\CreateCategoryAction;
+use App\Actions\CategoryGroup\CreateCategoryGroupAction;
 use App\DataTransferObjects\CategoryData;
-use App\Enums\CategoryTypeState;
-use App\Models\User;
-use Illuminate\Contracts\Auth\Authenticatable;
+use App\DataTransferObjects\CategoryGroupData;
+use App\Models\Ledger;
 use Illuminate\Database\Seeder;
+use Throwable;
 
 class CategorySeeder extends Seeder
 {
-    protected User $user;
-
     /**
      * Run the database seeds.
      *
-     * @param  User|Authenticatable  $user
+     * @param  Ledger  $ledger
      * @return void
+     * @throws Throwable
      */
-    public function run(User|Authenticatable $user): void
+    public function run(Ledger $ledger): void
     {
-        $this->user = $user;
-
-        $this->dataCategories(
-            $this->getIncomeCategories(),
-            CategoryTypeState::Income
-        );
-        $this->dataCategories(
-            $this->getExpenseCategories(),
-            CategoryTypeState::Expense
-        );
-    }
-
-    /**
-     * @param  array  $categories
-     * @param  CategoryTypeState  $categoryType
-     * @param  int|null  $parentId
-     * @return void
-     */
-    public function dataCategories(
-        array $categories,
-        CategoryTypeState $categoryType,
-        int|null $parentId = null
-    ): void {
-        foreach ($categories as $data) {
-            $attributes['name'] = $data['name'] ?? $data;
-            $attributes['is_editable'] = $data['is_editable'] ?? true;
-
-            $categoryData = new CategoryData(
-                name: $attributes['name'],
-                category_type_id: 1,
-                order: 0,
-                category_group_id: $parentId,
-                is_editable: $attributes['is_editable']
+        foreach ($this->getData() as $group) {
+            $categoryGroup = (new CreateCategoryGroupAction())->execute(
+                new CategoryGroupData(
+                    name: $group['name'],
+                    notes: null,
+                    ledger: $ledger
+                )
             );
-
-            $category = (new CreateCategory(
-                $categoryData,
-                $this->user
-            ))->execute();
-
-            if (isset($data['children'])) {
-                $this->dataCategories(
-                    $data['children'],
-                    $categoryType,
-                    $category->id
+            
+            foreach ($group['children'] as $categoryName) {
+                (new CreateCategoryAction())->execute(
+                    new CategoryData(
+                        name: $categoryName,
+                        notes: null,
+                        categoryGroup: $categoryGroup
+                    )
                 );
             }
         }
     }
-
-    public function getIncomeCategories(): array
-    {
-        return [
-            'Award',
-            'Gifts',
-            'Interest Money',
-            'Others',
-            'Salary',
-            'Selling',
-            [
-                'name' => 'Deposit',
-                'is_editable' => false,
-            ],
-        ];
-    }
-
-    public function getExpenseCategories(): array
+    
+    public function getData(): array
     {
         return [
             [
-                'name' => 'Bills & Utilities',
+                'name'     => 'Bills & Utilities',
                 'children' => [
                     'Electricity',
                     'Gas',
@@ -103,7 +58,7 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Transportation',
+                'name'     => 'Transportation',
                 'children' => [
                     'Fare',
                     'Maintenance',
@@ -112,6 +67,15 @@ class CategorySeeder extends Seeder
                     'Taxi',
                 ],
             ],
+            [
+                'name'     => 'Shopping',
+                'children' => [
+                    'Clothing',
+                    'Footwear',
+                    'Accessories',
+                    'Electronics',
+                ]
+            ]
         ];
     }
 }

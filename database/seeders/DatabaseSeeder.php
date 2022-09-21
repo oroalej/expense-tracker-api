@@ -16,8 +16,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             TaxonomySeeder::class,
             TermSeeder::class,
-            AccountTypesSeeder::class,
-            CurrencySeeder::class,
+            CategorySeeder::class,
+            AccountTypesSeeder::class
+//            AccountTypesSeeder::class,
+//            CurrencySeeder::class,
         ]);
     }
 }

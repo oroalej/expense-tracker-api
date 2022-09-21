@@ -31,26 +31,26 @@ class TaxonomySeeder extends Seeder
                 'id' => TaxonomyState::AccountGroupTypes->value,
                 'name' => 'Account Group Types',
             ],
-            [
-                'id' => TaxonomyState::CurrencyPlacements->value,
-                'name' => 'Currency Placement',
-            ],
-            [
-                'id' => TaxonomyState::DateFormats->value,
-                'name' => 'Date Format',
-            ],
-            [
-                'id' => TaxonomyState::Rights->value,
-                'name' => 'Rights',
-            ],
-            [
-                'id' => TaxonomyState::Roles->value,
-                'name' => 'Roles',
-            ],
-            [
-                'id' => TaxonomyState::NumberFormats->value,
-                'name' => 'Number Format',
-            ],
+//            [
+//                'id' => TaxonomyState::CurrencyPlacements->value,
+//                'name' => 'Currency Placement',
+//            ],
+//            [
+//                'id' => TaxonomyState::DateFormats->value,
+//                'name' => 'Date Format',
+//            ],
+//            [
+//                'id' => TaxonomyState::Rights->value,
+//                'name' => 'Rights',
+//            ],
+//            [
+//                'id' => TaxonomyState::Roles->value,
+//                'name' => 'Roles',
+//            ],
+//            [
+//                'id' => TaxonomyState::NumberFormats->value,
+//                'name' => 'Number Format',
+//            ],
         ];
     }
 }

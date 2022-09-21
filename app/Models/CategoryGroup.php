@@ -29,7 +29,12 @@ class CategoryGroup extends Model
     use SoftDeletes;
     use UseUuid;
 
-    protected $fillable = ['name', 'notes', 'is_hidden'];
+    protected $fillable = [
+        'name',
+        'notes',
+        'is_hidden',
+        'order'
+    ];
 
     protected $casts = [
         'is_hidden' => 'boolean'

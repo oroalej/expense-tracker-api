@@ -7,7 +7,7 @@ use App\Models\Category;
 use DB;
 use Throwable;
 
-class CreateCategory
+class CreateCategoryAction
 {
     /**
      * @throws Throwable
