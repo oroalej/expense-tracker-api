@@ -38,7 +38,7 @@ class CategoryGroupController extends Controller
         CreateCategoryGroupAction $createCategoryGroup
     ): JsonResponse {
         $order = CategoryGroup::count();
-        
+
         $categoryGroup = $createCategoryGroup->execute(
             new CategoryGroupData(
                 name: $request->name,

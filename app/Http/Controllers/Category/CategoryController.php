@@ -44,7 +44,7 @@ class CategoryController extends Controller
         CategoryGroup $categoryGroup
     ): JsonResponse {
         $order = $categoryGroup->categories()->count();
-        
+
         $category = $createCategory->execute(
             new CategoryData(
                 name: $request->name,

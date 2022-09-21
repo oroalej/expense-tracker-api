@@ -242,7 +242,6 @@ class UpdateTransactionTest extends TestCase
             'id'               => $this->transaction->id,
             'outflow'          => $attributes['outflow'],
             'remarks'          => $attributes['remarks'],
-            'transaction_date' => $attributes['transaction_date'],
         ]);
     }
 
