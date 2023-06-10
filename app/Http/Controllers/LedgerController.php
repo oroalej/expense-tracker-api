@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Ledger\CreateLedger;
-use App\Actions\Ledger\UpdateLedger;
-use App\DataTransferObjects\LedgerData;
-use App\Http\Requests\StoreLedgerRequest;
-use App\Http\Requests\UpdateLedgerRequest;
+use App\DTO\LedgerData;
+use App\Http\Requests\Store\StoreLedgerRequest;
+use App\Http\Requests\Update\UpdateLedgerRequest;
 use App\Http\Resources\LedgerResource;
+use App\Models\Currency;
 use App\Models\Ledger;
+use App\Services\LedgerService;
+use Exception;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -17,46 +20,65 @@ class LedgerController extends Controller
 {
     /**
      * Display a listing of the resource.
+     *
+     * @return JsonResponse
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        //
+        $ledgers = Ledger::with('currency:id,name,abbr,code,locale')
+            ->orderBy('updated_at')->get();
+
+        return $this->apiResponse([
+            'data' => LedgerResource::collection($ledgers)
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      *
      * @param  StoreLedgerRequest  $request
-     * @param  CreateLedger  $createLedgerAction
      * @return JsonResponse
      *
      * @throws Throwable
      */
     public function store(
         StoreLedgerRequest $request,
-        CreateLedger $createLedgerAction
     ): JsonResponse {
-        $ledger = $createLedgerAction->execute(
-            new LedgerData(
-                name: $request->name,
-                user: auth()->user(),
-            )
-        );
+        DB::beginTransaction();
 
-        return response()->json(
-            new LedgerResource($ledger),
-            Response::HTTP_CREATED
-        );
+        try {
+            $ledger = (new LedgerService())->store(
+                new LedgerData(
+                    name: $request->validated('name'),
+                    date_format: $request->validated('date_format'),
+                    user: auth()->user(),
+                    currency: Currency::find($request->get('currency_id'))
+                )
+            );
+            DB::commit();
+
+            return $this->apiResponse([
+                'data' => new LedgerResource($ledger)
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 
     /**
      * Display the specified resource.
      *
      * @param  Ledger  $ledger
+     * @return JsonResponse
      */
-    public function show(Ledger $ledger)
+    public function show(Ledger $ledger): JsonResponse
     {
-        //
+        return $this->apiResponse([
+            'data' => new LedgerResource($ledger)
+        ]);
     }
 
     /**
@@ -64,28 +86,60 @@ class LedgerController extends Controller
      *
      * @param  UpdateLedgerRequest  $request
      * @param  Ledger  $ledger
-     * @param  UpdateLedger  $updateLedgerAction
      * @return JsonResponse
+     * @throws Throwable
      */
     public function update(
         UpdateLedgerRequest $request,
         Ledger $ledger,
-        UpdateLedger $updateLedgerAction
     ): JsonResponse {
-        $ledger = $updateLedgerAction->execute(
-            $ledger,
-            new LedgerData(name: $request->name, user: auth()->user())
-        );
+        DB::beginTransaction();
 
-        return response()->json(new LedgerResource($ledger));
+        try {
+            $ledger = (new LedgerService())->update(
+                $ledger,
+                new LedgerData(
+                    name: $request->validated('name'),
+                    date_format: $request->validated('date_format'),
+                    user: auth()->user(),
+                    currency: Currency::find($request->get('currency_id'))
+                )
+            );
+            DB::commit();
+
+            return $this->apiResponse([
+                'data' => new LedgerResource($ledger)
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
      * @param  Ledger  $ledger
+     * @return JsonResponse
+     * @throws Throwable
      */
-    public function destroy(Ledger $ledger)
+    public function destroy(Ledger $ledger): JsonResponse
     {
+        DB::beginTransaction();
+
+        try {
+            (new LedgerService())->delete($ledger);
+
+            DB::commit();
+
+            return $this->apiResponse([
+                'data' => new LedgerResource($ledger)
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 }

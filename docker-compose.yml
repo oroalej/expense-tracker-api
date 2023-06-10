@@ -1,0 +1,16 @@
+version: "3.1"
+
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_DB="expense-tracker"
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"

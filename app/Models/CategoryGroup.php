@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Traits\UseUuid;
+use App\Models\Traits\UseHashIds;
 use Database\Factories\CategoryGroupFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string $uuid
+ * @property string $hashid
  * @property int $ledger_id
  * @property string $name
  * @property string $notes
@@ -28,18 +28,27 @@ class CategoryGroup extends Model
 {
     use HasFactory;
     use SoftDeletes;
-    use UseUuid;
+    use UseHashIds;
 
     protected $fillable = [
         'name',
         'notes',
         'is_hidden',
-        'order'
+        'order',
     ];
 
+    protected $touches = ['ledger'];
+
     protected $casts = [
-        'is_hidden' => 'boolean'
+        'is_hidden' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::deleted(static function (CategoryGroup $categoryGroup) {
+            $categoryGroup->categories()->delete();
+        });
+    }
 
     public function ledger(): BelongsTo
     {

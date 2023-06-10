@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Traits\UseUuid;
 use Database\Factories\GoalFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +10,6 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string $uuid
  * @property int $ledger_id
  * @property string $name
  * @property string $notes
@@ -29,7 +27,6 @@ class Goal extends Model
 {
     use HasFactory;
     use SoftDeletes;
-    use UseUuid;
 
     protected $fillable = [
         'name',

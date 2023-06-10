@@ -21,7 +21,7 @@ class AccountTypesSeeder extends Seeder
         foreach ($list as $item) {
             if (! is_array($item)) {
                 $item = [
-                    'name' => $item
+                    'name' => $item,
                 ];
             }
 
@@ -35,8 +35,8 @@ class AccountTypesSeeder extends Seeder
     {
         return [
             [
-                'id'   => AccountTypeState::Cash->value,
-                'name' => 'Cash'
+                'id' => AccountTypeState::Cash->value,
+                'name' => 'Cash',
             ],
             'Joint',
             'Savings',
@@ -55,7 +55,7 @@ class AccountTypesSeeder extends Seeder
             'Mortgage',
             'Credit Card',
             'Line of Credit',
-            'Other Debt'
+            'Other Debt',
         ];
     }
 
@@ -64,7 +64,7 @@ class AccountTypesSeeder extends Seeder
         return [
             'Cryptocurrency',
             'Stocks',
-            'Bonds'
+            'Bonds',
         ];
     }
 }

@@ -3,7 +3,7 @@
 namespace App\Listeners\Registered;
 
 use App\Actions\Wallet\CreateWallet;
-use App\DataTransferObjects\WalletData;
+use App\DTO\WalletData;
 use App\Enums\WalletTypeState;
 use Illuminate\Auth\Events\Registered;
 use Throwable;

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Traits\UseUuid;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,12 +11,11 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string $uuid
  * @property int $account_type_id
  * @property int $ledger_id
  * @property string $name
  * @property bool $is_archived
- * @property float $current_balance
+ * @property int $current_balance
  * @property Carbon|null $archived_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -30,15 +28,15 @@ class Account extends Model
 {
     use HasFactory;
     use SoftDeletes;
-    use UseUuid;
 
     protected $fillable = [
-        'uuid',
         'name',
         'current_balance',
         'is_archived',
-        'archived_at'
+        'archived_at',
     ];
+
+    protected $touches = ['ledger'];
 
     protected $attributes = [
         'current_balance' => 0,

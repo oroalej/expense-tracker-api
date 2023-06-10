@@ -5,11 +5,10 @@ namespace Tests\Feature\CategoryGroup;
 use App\Models\CategoryGroup;
 use App\Models\User;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class HideCategoryGroupTest extends TestCase
 {
-    public string $url;
-
     public CategoryGroup $categoryGroup;
 
     protected function setUp(): void
@@ -20,7 +19,9 @@ class HideCategoryGroupTest extends TestCase
             ->for($this->ledger)
             ->create();
 
-        $this->url = "api/category-groups/{$this->categoryGroup->uuid}/hide";
+        $categoryGroupId = Hashids::encode($this->categoryGroup->id);
+
+        $this->url = "api/category-groups/$categoryGroupId/hide";
     }
 
     public function test_guest_not_allowed(): void
@@ -28,12 +29,12 @@ class HideCategoryGroupTest extends TestCase
         $this->postJson($this->url)->assertUnauthorized();
     }
 
-    public function test_you_can_only_access_own_data(): void
+    public function test_a_user_can_only_access_own_data(): void
     {
         $anotherUser = User::factory()->create();
 
         $this->actingAs($anotherUser)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertNotFound();
     }
@@ -41,7 +42,7 @@ class HideCategoryGroupTest extends TestCase
     public function test_set_category_group_to_hidden(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertOk();
 

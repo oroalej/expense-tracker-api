@@ -9,8 +9,8 @@ use Throwable;
 class LoginException extends Exception
 {
     public function __construct(
-        protected string $message = 'These credentials do not match our records',
-        protected int $code = Response::HTTP_UNPROCESSABLE_ENTITY,
+        protected $message = 'These credentials do not match our records',
+        protected $code = Response::HTTP_UNPROCESSABLE_ENTITY,
         Throwable $previous = null
     ) {
         parent::__construct($message, $code, $previous);

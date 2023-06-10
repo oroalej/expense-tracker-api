@@ -7,6 +7,8 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Vinkla\Hashids\Facades\Hashids;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,16 @@ class RouteServiceProvider extends ServiceProvider
      */
     public const HOME = '/home';
 
+    public const HashIdRouteKeys = [
+        'category',
+        'categoryGroup',
+        'budget',
+        'budgetCategory',
+        'account',
+        'transaction',
+        'ledger'
+    ];
+
     /**
      * Define your route model bindings, pattern filters, etc.
      *
@@ -28,12 +40,25 @@ class RouteServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiting();
         $this->configureRoutes();
+
+        foreach (self::HashIdRouteKeys as $key) {
+            Route::bind($key, function (string $id) {
+                $decoded = Hashids::decode($id);
+
+                if (count($decoded)) {
+                    return $decoded[0];
+                }
+
+                throw (new NotFoundHttpException());
+            });
+        }
     }
 
     protected function configureRoutes(): void
     {
         $this->routes(function () {
             Route::prefix('api')
+                ->name('api.')
                 ->middleware('api')
                 ->group(base_path('routes/api.php'));
         });

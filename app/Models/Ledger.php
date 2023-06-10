@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\TaxonomyState;
-use App\Models\Traits\UseAuthenticateRestriction;
-use App\Models\Traits\UseUuid;
+use App\Models\Traits\UseHashIds;
 use Carbon\Carbon;
 use Database\Factories\LedgerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,11 +12,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property int $id
- * @property string $uuid
  * @property int $user_id
- * @property int $date_format_id
- * @property int $currency_placement_id
- * @property int $number_format_id
+ * @property string $number_format
  * @property int $currency_id
  * @property string $name
  * @property bool $is_archived
@@ -32,23 +27,43 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Ledger extends Model
 {
     use HasFactory;
-    use UseUuid;
     use SoftDeletes;
-    use UseAuthenticateRestriction;
+    use UseHashIds;
 
     protected $fillable = [
         'name',
-        'uuid',
         'is_archived',
+        'date_format'
     ];
 
     protected $casts = [
         'is_archived' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::deleted(static function (Ledger $ledger) {
+            $ledger->transactions()->delete();
+            $ledger->accounts()->delete();
+            $ledger->categories()->delete();
+            $ledger->categoryGroups()->delete();
+            $ledger->budgets()->delete();
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class);
+    }
+
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
     }
 
     public function categoryGroups(): HasMany
@@ -56,22 +71,9 @@ class Ledger extends Model
         return $this->hasMany(CategoryGroup::class);
     }
 
-    public function dateFormat(): BelongsTo
+    public function transactions(): HasMany
     {
-        return $this->belongsTo(Term::class, 'date_format_id')
-            ->where('taxonomy_id', TaxonomyState::DateFormats->value);
-    }
-
-    public function currencyPlacement(): BelongsTo
-    {
-        return $this->belongsTo(Term::class, 'currency_placement_id')
-            ->where('taxonomy_id', TaxonomyState::CurrencyPlacements->value);
-    }
-
-    public function numberFormat(): BelongsTo
-    {
-        return $this->belongsTo(Term::class, 'number_format_id')
-            ->where('taxonomy_id', TaxonomyState::NumberFormats->value);
+        return $this->hasMany(Transaction::class);
     }
 
     public function currency(): BelongsTo

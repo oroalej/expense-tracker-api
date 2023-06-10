@@ -10,39 +10,51 @@ class TransactionPolicy
 {
     use HandlesAuthorization;
 
+    protected object $ledger;
+
+    public function __construct()
+    {
+        $this->ledger = (object) request()->request->get('ledger', [
+            'id' => null,
+            'user_id' => null
+        ]);
+    }
+
+    public function store(User $user): bool
+    {
+        return $user->id === $this->ledger->user_id;
+    }
+
     /**
-     * Determine whether the user can view the model.
-     *
      * @param  User  $user
      * @param  Transaction  $transaction
      * @return bool
      */
     public function view(User $user, Transaction $transaction): bool
     {
-        return $user->id === $transaction->user_id;
+        return $transaction->ledger_id === $this->ledger->id &&
+            $user->id === $this->ledger->user_id;
     }
 
     /**
-     * Determine whether the user can update the model.
-     *
      * @param  User  $user
      * @param  Transaction  $transaction
      * @return bool
      */
     public function update(User $user, Transaction $transaction): bool
     {
-        return $user->id === $transaction->user_id;
+        return $transaction->ledger_id === $this->ledger->id &&
+           $user->id === $this->ledger->user_id;
     }
 
     /**
-     * Determine whether the user can delete the model.
-     *
      * @param  User  $user
      * @param  Transaction  $transaction
      * @return bool
      */
     public function delete(User $user, Transaction $transaction): bool
     {
-        return $user->id === $transaction->user_id;
+        return $transaction->ledger_id === $this->ledger->id &&
+           $user->id === $this->ledger->user_id;
     }
 }

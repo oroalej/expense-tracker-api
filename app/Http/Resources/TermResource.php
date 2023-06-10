@@ -2,13 +2,14 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use JsonSerializable;
 
 /**
- * @property string $name
+ * @property-read  int $id
+ * @property-read  string $name
+ * @property-read  Collection $accountTypes
  */
 class TermResource extends JsonResource
 {
@@ -16,12 +17,14 @@ class TermResource extends JsonResource
      * Transform the resource into an array.
      *
      * @param  Request  $request
-     * @return array|Arrayable|JsonSerializable
+     * @return array
      */
-    public function toArray($request)
+    public function toArray($request): array
     {
         return [
-            'name' => $this->name,
+            'id'            => $this->id,
+            'name'          => $this->name,
+            'account_types' => TermResource::collection($this->whenLoaded('accountTypes'))
         ];
     }
 }

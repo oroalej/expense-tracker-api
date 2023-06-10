@@ -4,13 +4,14 @@ namespace Tests\Feature\Category;
 
 use App\Models\Category;
 use App\Models\CategoryGroup;
+use App\Models\Currency;
 use App\Models\Ledger;
 use App\Models\User;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class ChangeCategoryGroupTest extends TestCase
 {
-    public string   $url;
     public Category $category;
 
     protected function setUp(): void
@@ -18,26 +19,41 @@ class ChangeCategoryGroupTest extends TestCase
         parent::setUp();
 
         $this->category = Category::factory()
-            ->for(CategoryGroup::factory()
-                ->for($this->ledger))
+            ->for(
+                CategoryGroup::factory()
+                    ->for($this->ledger)
+            )
+            ->for($this->ledger)
             ->create();
 
-        $this->url = "api/categories/{$this->category->uuid}/change-category-group";
+        $categoryId = Hashids::encode($this->category->id);
+
+        $this->url = "api/categories/$categoryId/change-category-group";
     }
 
     public function test_guest_not_allowed(): void
     {
-        $this->postJson($this->url)->assertUnauthorized();
+        $this->postJson($this->url)
+            ->assertUnauthorized();
     }
 
-    public function test_you_can_only_access_own_data(): void
+    public function test_a_user_can_only_access_own_data(): void
     {
+        /** @var User $anotherUser */
         $anotherUser = User::factory()->create();
 
         $this->actingAs($anotherUser)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertNotFound();
+    }
+
+    public function test_category_group_id_is_required(): void
+    {
+        $this->actingAs($this->user)
+            ->appendHeaderLedgerId()
+            ->postJson($this->url)
+            ->assertJsonValidationErrors('category_group_id');
     }
 
     public function test_assert_new_category_group_is_yours(): void
@@ -47,15 +63,16 @@ class ChangeCategoryGroupTest extends TestCase
             ->for(
                 Ledger::factory()
                     ->for(User::factory())
+                    ->for(Currency::first())
             )
             ->create();
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'id' => $categoryGroup->uuid
+                'category_group_id' => Hashids::encode($categoryGroup->id),
             ])
-            ->assertJsonValidationErrors('id');
+            ->assertJsonValidationErrors('category_group_id');
     }
 
     public function test_assert_new_category_group_belongs_to_the_same_ledger(): void
@@ -65,15 +82,16 @@ class ChangeCategoryGroupTest extends TestCase
             ->for(
                 Ledger::factory()
                     ->for($this->user)
+                    ->for(Currency::first())
             )
             ->create();
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'id' => $categoryGroup->uuid
+                'category_group_id' => Hashids::encode($categoryGroup->id),
             ])
-            ->assertJsonValidationErrors('id');
+            ->assertJsonValidationErrors('category_group_id');
     }
 
     public function test_assert_new_category_group_reflects_in_database(): void
@@ -84,9 +102,9 @@ class ChangeCategoryGroupTest extends TestCase
             ->create();
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'id' => $categoryGroup->uuid
+                'category_group_id' => Hashids::encode($categoryGroup->id),
             ])
             ->assertOk();
 
@@ -94,7 +112,7 @@ class ChangeCategoryGroupTest extends TestCase
 
         $this->assertDatabaseHas('categories', [
             'id'                => $this->category->id,
-            'category_group_id' => $this->category->category_group_id
+            'category_group_id' => $this->category->category_group_id,
         ]);
     }
 }

@@ -2,94 +2,109 @@
 
 namespace App\Http\Controllers\Transaction;
 
-use App\Actions\Transaction\CreateTransactionAction;
-use App\Actions\Transaction\DeleteTransaction;
-use App\Actions\Transaction\UpdateTransactionAction;
-use App\DataTransferObjects\TransactionData;
+use App\DTO\TransactionData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreTransactionRequest;
-use App\Http\Requests\UpdateTransactionRequest;
+use App\Http\Requests\Index\IndexTransactionRequest;
+use App\Http\Requests\Store\StoreTransactionRequest;
+use App\Http\Requests\Update\UpdateTransactionRequest;
+use App\Http\Resources\Collection\TransactionCollection;
 use App\Http\Resources\TransactionResource;
-use App\Models\Account;
-use App\Models\Category;
 use App\Models\Transaction;
+use App\Services\TransactionService;
+use Exception;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class TransactionController extends Controller
 {
+    public function index(IndexTransactionRequest $request): JsonResponse
+    {
+        $summary = Transaction::getBalanceSummary(
+            $request->get('account_id'),
+            $request->get('category_id')
+        );
+
+        $transactions = Transaction::getPaginatedData(
+            accountId: $request->get('account_id'),
+            categoryId: $request->get('category_id'),
+            perPage: $request->input('per_page', 15)
+        );
+
+        return $this->apiResponse([
+            'data' => [
+                'summary'   => $summary,
+                'paginated' => new TransactionCollection($transactions),
+            ],
+        ]);
+    }
+
     /**
      * Store a newly created resource in storage.
      *
-     * @param  Account  $account
      * @param  StoreTransactionRequest  $request
-     * @param  CreateTransactionAction  $createTransaction
      * @return JsonResponse
      *
      * @throws Throwable
      */
-    public function store(
-        Account $account,
-        StoreTransactionRequest $request,
-        CreateTransactionAction $createTransaction
-    ): JsonResponse {
-        $transaction = $createTransaction->execute(
-            new TransactionData(
-                inflow: $request->input('inflow'),
-                outflow: $request->input('outflow'),
-                remarks: $request->input('remarks'),
-                transaction_date: $request->input('transaction_date'),
-                category: Category::findUuid($request->input('category_id')),
-                account: $account,
-                is_approved: $request->input('is_approved', true),
-                is_cleared: $request->input('is_cleared', true),
-                is_excluded: $request->input('is_excluded', false)
-            )
-        );
+    public function store(StoreTransactionRequest $request): JsonResponse
+    {
+        DB::beginTransaction();
 
-        return response()->json(
-            new TransactionResource($transaction),
-            Response::HTTP_CREATED
-        );
+        try {
+            $transaction = (new TransactionService())->store(
+                TransactionData::fromRequest($request)
+            );
+
+            DB::commit();
+
+            return $this->apiResponse([
+                'data'    => new TransactionResource($transaction),
+                'message' => 'Transaction successfully created.',
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  Account  $account
      * @param  Transaction  $transaction
      * @param  UpdateTransactionRequest  $request
-     * @param  UpdateTransactionAction  $updateTransaction
      * @return JsonResponse
      *
      * @throws Throwable
      */
     public function update(
-        Account $account,
         Transaction $transaction,
         UpdateTransactionRequest $request,
-        UpdateTransactionAction $updateTransaction
     ): JsonResponse {
-        $transaction = $updateTransaction->execute(
-            $transaction,
-            new TransactionData(
-                inflow: $request->input('inflow'),
-                outflow: $request->input('outflow'),
-                remarks: $request->input('remarks'),
-                transaction_date: $request->input('transaction_date'),
-                category: Category::findUuid($request->input('category_id')),
-                account: $account,
-                is_approved: $request->input('is_approved', true),
-                is_cleared: $request->input('is_cleared', true),
-                is_excluded: $request->input('is_excluded', false)
-            )
-        );
+        DB::beginTransaction();
 
-        return response()->json(
-            new TransactionResource($transaction),
-            Response::HTTP_OK
-        );
+        try {
+            $transaction = (new TransactionService())->update(
+                transaction: $transaction,
+                attributes: TransactionData::fromRequest($request)
+            );
+
+            DB::commit();
+
+            return $this->apiResponse([
+                'data'    => new TransactionResource($transaction),
+                'message' => 'Transaction successfully updated.',
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 
     /**
@@ -102,8 +117,21 @@ class TransactionController extends Controller
      */
     public function destroy(Transaction $transaction): JsonResponse
     {
-        (new DeleteTransaction($transaction))->execute();
+        DB::beginTransaction();
 
-        return response()->json([], Response::HTTP_OK);
+        try {
+            (new TransactionService())->delete($transaction);
+
+            DB::commit();
+
+            return $this->apiResponse([
+                'message' => 'Transaction successfully deleted.',
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 }

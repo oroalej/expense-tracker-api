@@ -2,18 +2,22 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Category;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
+use Vinkla\Hashids\Facades\Hashids;
 
 /**
- * @property string $uuid
- * @property string $name
- * @property string $notes
- * @property bool $is_hidden
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property Carbon|null $deleted_at
+ * @property-read int $id
+ * @property-read string $name
+ * @property-read string $notes
+ * @property-read int $order
+ * @property-read bool $is_hidden
+ * @property Collection $categories
+ * @property-read Carbon|null $created_at
+ * @property-read Carbon|null $updated_at
+ * @property-read Carbon|null $deleted_at
  */
 class CategoryGroupResource extends JsonResource
 {
@@ -25,20 +29,22 @@ class CategoryGroupResource extends JsonResource
      */
     public function toArray($request): array
     {
+        $categoryIds = [];
+
+        if ($this->categories instanceof Collection) {
+            $categoryIds = $this->categories->map(fn (Category $category) => Hashids::encode($category->id));
+        }
+
         return [
-            'uuid'      => $this->uuid,
-            'name'      => $this->name,
-            'notes'     => $this->notes,
-            'is_hidden' => $this->is_hidden,
-
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-            'deleted_at' => $this->deleted_at,
-
-            //            'ledger' => new LedgerResource($this->whenLoaded('ledger')),
-            //            'categories' => CategoryResource::collection(
-            //                $this->whenLoaded('categories')
-            //            ),
+            'id'         => Hashids::encode($this->id),
+            'name'       => $this->name,
+            'notes'      => $this->notes ?? '',
+            'order'      => $this->order,
+            'is_hidden'  => $this->is_hidden,
+            'created_at' => $this->whenColumnLoaded('created_at'),
+            'updated_at' => $this->whenColumnLoaded('updated_at'),
+            'deleted_at' => $this->whenColumnLoaded('deleted_at'),
+            'categories' => $categoryIds
         ];
     }
 }

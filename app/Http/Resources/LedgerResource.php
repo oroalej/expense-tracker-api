@@ -2,24 +2,23 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\CurrentPlacementState;
 use App\Models\Currency;
-use App\Models\Term;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
+use Vinkla\Hashids\Facades\Hashids;
 
 /**
- * @property string $name
- * @property string $uuid
- * @property string $user_id
- * @property Term $dateFormat
- * @property int $currencyPlacement
- * @property Term $numberFormat
- * @property Currency $currency
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property Carbon|null $deleted_at
+ * @property-read string $name
+ * @property-read int $id
+ * @property-read string $user_id
+ * @property-read string $date_format
+ * @property-read bool is_archived
+ * @property-read int $currency_placement
+ * @property-read Currency $currency
+ * @property-read Carbon|null $created_at
+ * @property-read Carbon|null $updated_at
+ * @property-read Carbon|null $archived_at
+ * @property-read Carbon|null $deleted_at
  */
 class LedgerResource extends JsonResource
 {
@@ -31,25 +30,16 @@ class LedgerResource extends JsonResource
      */
     public function toArray($request): array
     {
-//        $numberFormat = explode('', $this->numberFormat->name);
-
         return [
-            'uuid' => $this->uuid,
-            'name' => $this->name,
-            //            'currency_format' => [
-            //                'code'                => $this->currency->code,
-            //                "example_format"      => number_format(123456.78, $numberFormat[0], $numberFormat[1], $numberFormat[2]),
-            //                'thousands_separator' => $numberFormat[2],
-            //                'decimal_separator'   => $numberFormat[1],
-            //                'decimal_digits'      => $numberFormat[0],
-            //                'currency_symbol'     => $this->currency->abbr,
-            //                'symbol_first'        => $this->currencyPlacement === CurrentPlacementState::Beginning->value,
-            //                'symbol_visible'      => $this->currencyPlacement !== CurrentPlacementState::Hidden->value
-            //            ],
-            //            'date_format'     => $this->dateFormat->name,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-            'deleted_at' => $this->deleted_at,
+            'id'            => Hashids::encode($this->id),
+            'number_format' => new CurrencyResource($this->whenLoaded('currency')),
+            'name'          => $this->name,
+            'date_format'   => $this->date_format,
+            'is_archived'   => $this->is_archived,
+            'created_at'    => $this->created_at,
+            'archived_at'   => $this->archived_at,
+            'updated_at'    => $this->updated_at,
+            'deleted_at'    => $this->deleted_at,
         ];
     }
 }

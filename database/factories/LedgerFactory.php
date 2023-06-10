@@ -21,8 +21,8 @@ class LedgerFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->word,
-            'uuid' => $this->faker->uuid,
+            'name'        => $this->faker->word,
+            'date_format' => "MM/DD/YYYY"
         ];
     }
 

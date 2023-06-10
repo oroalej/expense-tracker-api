@@ -19,18 +19,12 @@ class BudgetFactory extends Factory
      */
     public function definition(): array
     {
-        $today = now();
+        $date = $this->faker->dateTimeThisYear('4 months');
 
         return [
-            'notes' => $this->faker->sentence,
-            'month' => $today->month,
-            'year' => $today->year,
+            'month' => $date->format("n"),
+            'year'  => $date->format('Y'),
+            'date' => $date->format("Y-m-d")
         ];
-    }
-
-    public function configure(): BudgetFactory
-    {
-        return $this->afterCreating(static function (Budget $budget) {
-        });
     }
 }

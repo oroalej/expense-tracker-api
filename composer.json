@@ -10,16 +10,13 @@
         "laravel/framework": "^9.2",
         "laravel/sanctum": "^2.14",
         "laravel/tinker": "^2.7",
-        "nuwave/lighthouse": "^5.42",
-        "spatie/laravel-query-builder": "^5.0",
-        "spatie/laravel-sluggable": "^3.3"
+        "vinkla/hashids": "^10.0.1"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^2.12",
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.1",
         "laravel/sail": "^1.0.1",
-        "mll-lab/laravel-graphql-playground": "^2.6",
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^6.1",
         "pestphp/pest": "^1.21",
@@ -32,7 +29,9 @@
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
+            "Database\\Seeders\\": "database/seeders/",
+            "App\\DTO\\": "app/DTO",
+            "App\\Repository\\": "app/Repository"
         }
     },
     "autoload-dev": {

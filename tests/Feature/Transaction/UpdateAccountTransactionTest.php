@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\CategoryGroup;
 use App\Models\Transaction;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class UpdateAccountTransactionTest extends TestCase
 {
@@ -24,115 +25,145 @@ class UpdateAccountTransactionTest extends TestCase
         $this->account   = Account::factory()
             ->for($this->ledger)
             ->for($cashAccountType)
+            ->state([
+                'current_balance' => 0
+            ])
             ->create();
 
         $this->category = Category::factory()
             ->for(
                 CategoryGroup::factory()->for($this->ledger)
             )
+            ->for($this->ledger)
             ->create();
     }
 
-    public function test_account_balance_is_correct_after_outflow_value_is_updated(): void
+    public function test_account_balance_is_correctly_updated_when_outflow_was_changed(): void
     {
         /** @var Transaction $transaction */
         $transaction = Transaction::factory()
             ->for($this->account)
             ->for($this->category)
-            ->setOutflow()
+            ->for($this->ledger)
+            ->setOutflow(2000)
+            ->cleared()
             ->create();
 
-        $url = "api/accounts/{$this->account->uuid}/transactions/$transaction->uuid";
+        $transactionId = Hashids::encode($transaction->id);
+        $url           = "api/transactions/$transactionId";
 
         $attributes = [
-            'outflow'          => $this->faker->randomFloat(2, 1, 999999),
+            'outflow'          => 3000,
             'remarks'          => $transaction->remarks,
             'transaction_date' => $transaction->transaction_date->format('Y-m-d'),
-            'category_id'      => $transaction->category->uuid,
-            'account_id'       => $this->account->uuid,
+            'category_id'      => Hashids::encode($transaction->category->id),
+            'account_id'       => Hashids::encode($this->account->id),
         ];
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($url, $attributes)
             ->assertOk();
 
         $this->assertDatabaseHas('accounts', [
             'id'              => $this->account->id,
-            'current_balance' => $this->account->current_balance +
-                $transaction->outflow -
-                $attributes['outflow'],
+            'current_balance' => -3000,
         ]);
     }
 
-    public function test_account_balance_is_correct_after_inflow_value_is_updated(): void
+    public function test_account_balance_is_correctly_updated_when_inflow_was_changed(): void
     {
         /** @var Transaction $transaction */
         $transaction = Transaction::factory()
             ->for($this->account)
             ->for($this->category)
-            ->setInflow()
+            ->for($this->ledger)
+            ->setInflow(2000)
+            ->cleared()
             ->create();
 
-        $url = "api/accounts/{$this->account->uuid}/transactions/$transaction->uuid";
+        $transactionId = Hashids::encode($transaction->id);
+        $url           = "api/transactions/$transactionId";
 
         $attributes = [
-            'inflow'           => $this->faker->randomFloat(2, 1, 999999),
+            'inflow'           => 8000,
             'remarks'          => $transaction->remarks,
-            'transaction_date' => $transaction->transaction_date->format(
-                'Y-m-d'
-            ),
-            'category_id'      => $transaction->category->uuid,
-            'account_id'       => $this->account->uuid,
+            'transaction_date' => $transaction->transaction_date->format('Y-m-d'),
+            'category_id'      => Hashids::encode($transaction->category->id),
+            'account_id'       => Hashids::encode($this->account->id),
         ];
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($url, $attributes)
             ->assertOk();
 
         $this->assertDatabaseHas('accounts', [
             'id'              => $this->account->id,
-            'current_balance' => $this->account->current_balance -
-                $transaction->inflow +
-                $attributes['inflow'],
+            'current_balance' => 8000
         ]);
     }
 
-    public function test_account_balance_is_correct_after_inflow_and_outflow_values_are_updated(): void
+    public function test_account_balance_is_correctly_updated_when_account_id_was_changed()
     {
-        /** @var Transaction $transaction */
-        $transaction = Transaction::factory()
-            ->for($this->account)
-            ->for($this->category)
+        $accountType = AccountType::find(AccountTypeState::Cash->value);
+
+        /** @var Account $oldAccount */
+        $oldAccount = Account::factory()
+            ->for($this->ledger)
+            ->for($accountType)
+            ->state([
+                'current_balance' => 50
+            ])
             ->create();
 
-        $url = "api/accounts/{$this->account->uuid}/transactions/$transaction->uuid";
+        /** @var Account $newAccount */
+        $newAccount = Account::factory()
+            ->for($this->ledger)
+            ->for($accountType)
+            ->state([
+                'current_balance' => 20
+            ])
+            ->create();
+
+        /** @var Transaction $transaction */
+        $transaction = Transaction::factory()
+            ->for($oldAccount)
+            ->for($this->category)
+            ->for($this->ledger)
+            ->setInflow(3000)
+            ->cleared()
+            ->create();
+
+        $transactionId = Hashids::encode($transaction->id);
+        $url           = "api/transactions/$transactionId";
 
         $attributes = [
-            'inflow'           => $this->faker->randomFloat(2, 1, 999999),
-            'outflow'          => $this->faker->randomFloat(2, 1, 999999),
+            'inflow'           => $transaction->inflow,
             'remarks'          => $transaction->remarks,
-            'transaction_date' => $transaction->transaction_date->format(
-                'Y-m-d'
-            ),
-            'category_id'      => $transaction->category->uuid,
-            'account_id'       => $this->account->uuid,
+            'transaction_date' => $transaction->transaction_date->format('Y-m-d'),
+            'category_id'      => Hashids::encode($transaction->category->id),
+            'account_id'       => Hashids::encode($newAccount->id),
         ];
 
+        $this->assertDatabaseHas('accounts', [
+            'id'              => $oldAccount->id,
+            'current_balance' => 3050
+        ]);
+
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($url, $attributes)
             ->assertOk();
 
-        $expectedAccountBalance =
-            $this->account->current_balance +
-            ($transaction->outflow + $attributes['inflow']) -
-            ($transaction->inflow + $attributes['outflow']);
+        $this->assertDatabaseHas('accounts', [
+            'id'              => $oldAccount->id,
+            'current_balance' => 50
+        ]);
 
         $this->assertDatabaseHas('accounts', [
-            'id'              => $this->account->id,
-            'current_balance' => $expectedAccountBalance,
+            'id'              => $newAccount->id,
+            'current_balance' => 3020
         ]);
     }
 }

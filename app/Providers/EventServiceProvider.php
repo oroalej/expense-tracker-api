@@ -2,8 +2,9 @@
 
 namespace App\Providers;
 
-use App\Listeners\Registered\CreateCashWallet;
-use App\Listeners\Registered\SeedCategories;
+use App\Listeners\Registered\InitialLedger;
+use App\Models\Ledger;
+use App\Observers\LedgerObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -18,9 +19,8 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
-            SeedCategories::class,
-            CreateCashWallet::class,
-        ],
+            InitialLedger::class
+        ]
     ];
 
     /**
@@ -30,7 +30,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Ledger::observe(LedgerObserver::class);
     }
 
     /**

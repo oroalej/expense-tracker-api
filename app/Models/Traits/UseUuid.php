@@ -2,12 +2,9 @@
 
 namespace App\Models\Traits;
 
-use Illuminate\Support\Str;
 use Ramsey\Uuid\UuidInterface;
+use Str;
 
-/**
- * @property string $uuid
- */
 trait UseUuid
 {
     protected static function bootUseUuid(): void

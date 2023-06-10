@@ -5,6 +5,7 @@ namespace Tests\Feature\CategoryGroup;
 use App\Models\CategoryGroup;
 use App\Models\User;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class UnhideCategoryGroupTest extends TestCase
 {
@@ -20,7 +21,9 @@ class UnhideCategoryGroupTest extends TestCase
             ->for($this->ledger)
             ->create();
 
-        $this->url = "api/category-groups/{$this->categoryGroup->uuid}/unhide";
+        $categoryGroupId = Hashids::encode($this->categoryGroup->id);
+
+        $this->url = "api/category-groups/$categoryGroupId/unhide";
     }
 
     public function test_guest_not_allowed(): void
@@ -33,7 +36,7 @@ class UnhideCategoryGroupTest extends TestCase
         $anotherUser = User::factory()->create();
 
         $this->actingAs($anotherUser)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertNotFound();
     }
@@ -41,7 +44,7 @@ class UnhideCategoryGroupTest extends TestCase
     public function test_set_category_group_to_hidden(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertOk();
 

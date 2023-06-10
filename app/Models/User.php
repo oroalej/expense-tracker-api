@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Traits\UseUuid;
 use Database\Factories\UserFactory;
 use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,6 +34,7 @@ class User extends Authenticatable
     use HasApiTokens;
     use HasFactory;
     use Notifiable;
+    use UseUuid;
 
     /**
      * The attributes that are mass assignable.
@@ -70,5 +72,9 @@ class User extends Authenticatable
     public function accounts(): HasManyThrough
     {
         return $this->hasManyThrough(Account::class, Ledger::class);
+    }
+
+    public function getRouteKey()
+    {
     }
 }

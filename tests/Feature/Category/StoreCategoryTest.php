@@ -3,14 +3,12 @@
 namespace Category;
 
 use App\Models\CategoryGroup;
-use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Str;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class StoreCategoryTest extends TestCase
 {
-    public string $url;
-
     public CategoryGroup $categoryGroup;
 
     protected function setUp(): void
@@ -22,7 +20,9 @@ class StoreCategoryTest extends TestCase
             ->for($this->ledger)
             ->create();
 
-        $this->url = "api/category-groups/{$this->categoryGroup->uuid}/categories";
+        $categoryGroupId = Hashids::encode($this->categoryGroup->id);
+
+        $this->url = "api/category-groups/$categoryGroupId/categories";
     }
 
     public function test_asserts_guest_not_allowed(): void
@@ -33,7 +33,7 @@ class StoreCategoryTest extends TestCase
     public function test_assert_name_field_is_required(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertJsonValidationErrors('name');
     }
@@ -41,9 +41,9 @@ class StoreCategoryTest extends TestCase
     public function test_assert_name_has_255_characters_max_length(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'name' => Str::random(Builder::$defaultStringLength),
+                'name' => Str::random(255),
             ])
             ->assertJsonMissingValidationErrors('name');
     }
@@ -51,9 +51,9 @@ class StoreCategoryTest extends TestCase
     public function test_asserts_name_field_is_not_more_than_255_characters(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'name' => Str::random(Builder::$defaultStringLength + 1),
+                'name' => Str::random(256),
             ])
             ->assertJsonValidationErrors('name');
     }
@@ -61,9 +61,9 @@ class StoreCategoryTest extends TestCase
     public function test_assert_notes_has_255_characters_max_length(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'notes' => Str::random(Builder::$defaultStringLength),
+                'notes' => Str::random(255),
             ])
             ->assertJsonMissingValidationErrors('notes');
     }
@@ -71,9 +71,9 @@ class StoreCategoryTest extends TestCase
     public function test_asserts_notes_is_not_more_than_255_characters(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'notes' => Str::random(Builder::$defaultStringLength + 1),
+                'notes' => Str::random(256),
             ])
             ->assertJsonValidationErrors('notes');
     }
@@ -81,61 +81,56 @@ class StoreCategoryTest extends TestCase
     public function test_asserts_user_can_create_category(): void
     {
         $attributes = [
-            'name'              => $this->faker->word,
-            'notes'             => $this->faker->sentence,
-            'category_group_id' => $this->categoryGroup->uuid
+            'name'  => $this->faker->word,
+            'notes' => $this->faker->sentence
         ];
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, $attributes)
             ->assertCreated();
 
-        $this->assertDatabaseCount('categories', 1);
         $this->assertDatabaseHas('categories', [
             'name'              => $attributes['name'],
-            'category_group_id' => $this->categoryGroup->id
+            'category_group_id' => $this->categoryGroup->id,
         ]);
     }
 
-    public function test_create_category_is_not_hidden(): void
+    public function test_created_category_is_not_hidden(): void
     {
         $attributes = [
-            'name'              => $this->faker->word,
-            'notes'             => $this->faker->sentence,
-            'category_group_id' => $this->categoryGroup->uuid
+            'name'  => $this->faker->word,
+            'notes' => $this->faker->sentence
         ];
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url, $attributes)
             ->assertCreated();
 
-        $this->assertDatabaseCount('categories', 1);
         $this->assertDatabaseHas('categories', [
             'name'              => $attributes['name'],
             'is_hidden'         => false,
-            'category_group_id' => $this->categoryGroup->id
+            'category_group_id' => $this->categoryGroup->id,
         ]);
     }
 
     public function test_assert_api_has_correct_structure(): void
     {
-        $attributes = [
-            'name'              => $this->faker->word,
-            'notes'             => $this->faker->sentence,
-            'category_group_id' => $this->categoryGroup->uuid,
-        ];
-
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
-            ->postJson($this->url, $attributes)
-            ->assertJsonStructure([
-                'name',
-                'notes',
-                'created_at',
-                'updated_at',
-                'deleted_at',
-            ]);
+            ->appendHeaderLedgerId()
+            ->postJson($this->url, [
+                'name'              => $this->faker->word,
+                'notes'             => $this->faker->sentence,
+                'category_group_id' => $this->categoryGroup->uuid,
+            ])
+            ->assertJsonStructure(
+                $this->apiStructure([
+                    'id',
+                    'name',
+                    'notes',
+                    'category_group_id'
+                ])
+            );
     }
 }

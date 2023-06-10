@@ -2,92 +2,151 @@
 
 namespace App\Http\Controllers\CategoryGroup;
 
-use App\Actions\CategoryGroup\CreateCategoryGroupAction;
-use App\Actions\CategoryGroup\UpdateCategoryGroupAction;
-use App\DataTransferObjects\CategoryGroupData;
+use App\DTO\CategoryGroupData;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreCategoryGroupRequest;
-use App\Http\Requests\UpdateCategoryGroupRequest;
+use App\Http\Requests\Destroy\DestroyCategoryGroupRequest;
+use App\Http\Requests\Store\StoreCategoryGroupRequest;
+use App\Http\Requests\Update\UpdateCategoryGroupRequest;
 use App\Http\Resources\CategoryGroupResource;
 use App\Models\CategoryGroup;
+use App\Services\CategoryGroupService;
+use Exception;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class CategoryGroupController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $categoryGroups = CategoryGroup::all();
+        $categoryGroups = CategoryGroup::select([
+            'id',
+            'name',
+            'notes',
+            'order',
+            'is_hidden',
+        ])
+            ->with([
+                'categories' => function (HasMany $builder) {
+                    $builder->select(['categories.id', 'category_group_id'])
+                        ->where('categories.is_hidden', false)
+                        ->orderBy('categories.order');
+                },
+            ])
+            ->where('ledger_id', $request->ledger->id)
+            ->where('category_groups.is_hidden', false)
+            ->orderBy('category_groups.order')
+            ->get();
 
-        return response()->json(
-            CategoryGroupResource::collection($categoryGroups)
-        );
+        return $this->apiResponse([
+            'data' => CategoryGroupResource::collection($categoryGroups),
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      *
      * @param  StoreCategoryGroupRequest  $request
-     * @param  CreateCategoryGroupAction  $createCategoryGroup
      * @return JsonResponse
+     *
      * @throws Throwable
      */
     public function store(
-        StoreCategoryGroupRequest $request,
-        CreateCategoryGroupAction $createCategoryGroup
+        StoreCategoryGroupRequest $request
     ): JsonResponse {
-        $order = CategoryGroup::count();
+        DB::beginTransaction();
 
-        $categoryGroup = $createCategoryGroup->execute(
-            new CategoryGroupData(
-                name: $request->name,
-                notes: $request->notes,
-                order: $order + 1,
-                ledger: $request->ledger
-            )
-        );
+        try {
+            $categoryGroup = (new CategoryGroupService())->store(
+                CategoryGroupData::fromRequest($request)
+            );
 
-        return response()->json(
-            new CategoryGroupResource($categoryGroup),
-            Response::HTTP_CREATED
-        );
+            DB::commit();
+
+            return $this->apiResponse([
+                'data'    => new CategoryGroupResource($categoryGroup),
+                'message' => "$categoryGroup->name category group successfully created.",
+            ], Response::HTTP_CREATED);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function show(CategoryGroup $categoryGroup): JsonResponse
+    {
+        return $this->apiResponse([
+            'data' => new CategoryGroupResource($categoryGroup),
+        ]);
     }
 
     /**
-     * Update the specified resource in storage.
-     *
      * @param  UpdateCategoryGroupRequest  $request
      * @param  CategoryGroup  $categoryGroup
-     * @param  UpdateCategoryGroupAction  $updateCategoryGroup
      * @return JsonResponse
+     * @throws Throwable
      */
     public function update(
         UpdateCategoryGroupRequest $request,
-        CategoryGroup $categoryGroup,
-        UpdateCategoryGroupAction $updateCategoryGroup
+        CategoryGroup $categoryGroup
     ): JsonResponse {
-        $categoryGroup = $updateCategoryGroup->execute(
-            $categoryGroup,
-            new CategoryGroupData(
-                name: $request->name,
-                notes: $request->notes,
-                order: $categoryGroup->order,
-                ledger: $request->ledger
-            )
-        );
+        DB::beginTransaction();
 
-        return response()->json(new CategoryGroupResource($categoryGroup));
+        try {
+            $categoryGroup = (new CategoryGroupService())->update(
+                $categoryGroup,
+                new CategoryGroupData(
+                    name: $request->name,
+                    notes: $request->notes,
+                    ledger: $request->ledger,
+                    order: $categoryGroup->order
+                )
+            );
+
+            DB::commit();
+
+            return $this->apiResponse([
+                'data'    => new CategoryGroupResource($categoryGroup),
+                'message' => "$categoryGroup->name category group successfully updated",
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
+     * @param  DestroyCategoryGroupRequest  $request
      * @param  CategoryGroup  $categoryGroup
      * @return JsonResponse
+     * @throws Throwable
      */
-    public function destroy(CategoryGroup $categoryGroup)
+    public function destroy(DestroyCategoryGroupRequest $request, CategoryGroup $categoryGroup): JsonResponse
     {
-        //
+        DB::beginTransaction();
+
+        try {
+            $categoryGroup = (new CategoryGroupService())->delete(
+                $categoryGroup,
+                $request->get('category_id')
+            );
+
+            return $this->apiResponse([
+                'message' => "$categoryGroup->name category group successfully deleted.",
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 }

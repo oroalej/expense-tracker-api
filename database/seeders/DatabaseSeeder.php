@@ -16,8 +16,12 @@ class DatabaseSeeder extends Seeder
         $this->call([
             TaxonomySeeder::class,
             TermSeeder::class,
-            AccountTypesSeeder::class
-//            CurrencySeeder::class,
+            AccountTypesSeeder::class,
+            CurrencySeeder::class,
         ]);
+
+//        if (config('app.env') === 'local') {
+//            $this->call(FactorySeeder::class);
+//        }
     }
 }

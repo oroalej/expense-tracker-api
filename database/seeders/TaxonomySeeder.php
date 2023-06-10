@@ -24,33 +24,13 @@ class TaxonomySeeder extends Seeder
     {
         return [
             [
-                'id' => TaxonomyState::CategoryTypes->value,
+                'id'   => TaxonomyState::CategoryTypes->value,
                 'name' => 'Category Types',
             ],
             [
-                'id' => TaxonomyState::AccountGroupTypes->value,
+                'id'   => TaxonomyState::AccountGroupTypes->value,
                 'name' => 'Account Group Types',
-            ],
-//            [
-//                'id' => TaxonomyState::CurrencyPlacements->value,
-//                'name' => 'Currency Placement',
-//            ],
-//            [
-//                'id' => TaxonomyState::DateFormats->value,
-//                'name' => 'Date Format',
-//            ],
-//            [
-//                'id' => TaxonomyState::Rights->value,
-//                'name' => 'Rights',
-//            ],
-//            [
-//                'id' => TaxonomyState::Roles->value,
-//                'name' => 'Roles',
-//            ],
-//            [
-//                'id' => TaxonomyState::NumberFormats->value,
-//                'name' => 'Number Format',
-//            ],
+            ]
         ];
     }
 }

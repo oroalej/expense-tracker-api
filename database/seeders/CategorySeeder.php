@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Actions\Category\CreateCategoryAction;
-use App\Actions\CategoryGroup\CreateCategoryGroupAction;
-use App\DataTransferObjects\CategoryData;
-use App\DataTransferObjects\CategoryGroupData;
+use App\DTO\CategoryData;
+use App\DTO\CategoryGroupData;
 use App\Models\Ledger;
+use App\Services\CategoryGroupService;
+use App\Services\CategoryService;
 use Illuminate\Database\Seeder;
 use Throwable;
 
@@ -17,27 +17,29 @@ class CategorySeeder extends Seeder
      *
      * @param  Ledger  $ledger
      * @return void
+     *
      * @throws Throwable
      */
     public function run(Ledger $ledger): void
     {
-        foreach ($this->getData() as $index =>$group) {
-            $categoryGroup = (new CreateCategoryGroupAction())->execute(
+        foreach ($this->getData() as $index => $group) {
+            $categoryGroup = (new CategoryGroupService())->store(
                 new CategoryGroupData(
                     name: $group['name'],
                     notes: null,
-                    order: $index + 1,
-                    ledger: $ledger
+                    ledger: $ledger,
+                    order: $index + 1
                 )
             );
 
             foreach ($group['children'] as $order => $categoryName) {
-                (new CreateCategoryAction())->execute(
+                (new CategoryService())->store(
                     new CategoryData(
                         name: $categoryName,
+                        category_group: $categoryGroup,
+                        ledger: $ledger,
                         notes: null,
-                        order: $order + 1,
-                        categoryGroup: $categoryGroup
+                        order: $order + 1
                     )
                 );
             }
@@ -48,7 +50,7 @@ class CategorySeeder extends Seeder
     {
         return [
             [
-                'name'     => 'Bills & Utilities',
+                'name' => 'Bills & Utilities',
                 'children' => [
                     'Electricity',
                     'Gas',
@@ -60,7 +62,7 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
-                'name'     => 'Transportation',
+                'name' => 'Transportation',
                 'children' => [
                     'Fare',
                     'Maintenance',
@@ -70,14 +72,14 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
-                'name'     => 'Shopping',
+                'name' => 'Shopping',
                 'children' => [
                     'Clothing',
                     'Footwear',
                     'Accessories',
                     'Electronics',
-                ]
-            ]
+                ],
+            ],
         ];
     }
 }

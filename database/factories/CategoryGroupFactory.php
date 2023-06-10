@@ -22,9 +22,9 @@ class CategoryGroupFactory extends Factory
         $categoryGroupCount = CategoryGroup::count();
 
         return [
-            'name'  => $this->faker->word,
+            'name' => $this->faker->word,
             'notes' => $this->faker->sentence,
-            'order' => $categoryGroupCount + 1
+            'order' => $categoryGroupCount + 1,
         ];
     }
 

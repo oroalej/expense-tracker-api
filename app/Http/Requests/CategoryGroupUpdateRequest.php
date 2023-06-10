@@ -2,16 +2,16 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Category;
 use App\Models\CategoryGroup;
-use App\Models\Ledger;
 use App\Rules\IsOwnData;
-use Illuminate\Foundation\Http\FormRequest;
+use Gate;
 
 /**
  * @property-read $id
- * @property-read Ledger $ledger
+ * @property-read Category $category
  */
-class CategoryGroupUpdateRequest extends FormRequest
+class CategoryGroupUpdateRequest extends CustomRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -20,7 +20,7 @@ class CategoryGroupUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return Gate::allows('update', $this->category);
     }
 
     /**
@@ -31,9 +31,10 @@ class CategoryGroupUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => [
-                new IsOwnData($this->ledger, CategoryGroup::class)
-            ]
+            'category_group_id' => [
+                'required',
+                new IsOwnData($this->ledger, CategoryGroup::class),
+            ],
         ];
     }
 }

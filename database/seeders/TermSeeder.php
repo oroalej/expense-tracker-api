@@ -21,7 +21,7 @@ class TermSeeder extends Seeder
                 $item['taxonomy_id'] = $taxonomy->value;
             } else {
                 $item = [
-                    'name' => $item,
+                    'name'        => $item,
                     'taxonomy_id' => $taxonomy->value,
                 ];
             }
@@ -32,11 +32,19 @@ class TermSeeder extends Seeder
 
     public function getAccountTypes(): array
     {
-        return array_map(static function (AccountGroupTypeState $item) {
-            return [
-                'id' => $item->value,
-                'name' => $item->name,
-            ];
-        }, AccountGroupTypeState::cases());
+        return [
+            [
+                'id'   => AccountGroupTypeState::Budget->value,
+                'name' => 'Budget'
+            ],
+            [
+                'id'   => AccountGroupTypeState::Debt->value,
+                'name' => 'Mortgages, Loans, And Debt'
+            ],
+            [
+                'id'   => AccountGroupTypeState::Tracking->value,
+                'name' => 'Tracking'
+            ],
+        ];
     }
 }

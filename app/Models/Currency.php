@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Traits\UseUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $uuid
  * @property string $name
  * @property string $abbr
  * @property string $code
@@ -20,7 +18,6 @@ use Illuminate\Support\Carbon;
 class Currency extends Model
 {
     use HasFactory;
-    use UseUuid;
 
     protected $fillable = [
         'abbr', 'code', 'locale', 'name',

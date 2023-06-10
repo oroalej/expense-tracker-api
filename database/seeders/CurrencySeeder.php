@@ -18,7 +18,7 @@ class CurrencySeeder extends Seeder
             'name' => 'Philippine Peso',
             'abbr' => '₱',
             'code' => 'PHP',
-            'locale' => 'en-PHP',
+            'locale' => 'en-PH',
         ]);
     }
 }

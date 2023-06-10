@@ -6,11 +6,10 @@ use App\Models\Account;
 use App\Models\AccountType;
 use App\Models\User;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class ArchivedAccountTest extends TestCase
 {
-    public string $url;
-
     public Account $account;
 
     protected function setUp(): void
@@ -24,7 +23,9 @@ class ArchivedAccountTest extends TestCase
             ->for($this->ledger)
             ->create();
 
-        $this->url = "api/accounts/{$this->account->uuid}/archived";
+        $accountId = Hashids::encode($this->account->id);
+
+        $this->url = "api/accounts/$accountId/archived";
     }
 
     public function test_guest_not_allowed(): void
@@ -37,7 +38,7 @@ class ArchivedAccountTest extends TestCase
         $anotherUser = User::factory()->create();
 
         $this->actingAs($anotherUser)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertNotFound();
     }
@@ -45,7 +46,7 @@ class ArchivedAccountTest extends TestCase
     public function test_set_account_to_archived(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->postJson($this->url)
             ->assertOk();
 

@@ -2,14 +2,74 @@
 
 namespace App\Http\Controllers\Category;
 
-use App\Actions\Category\HideCategoryAction;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Services\CategoryService;
+use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class HideCategoryController extends Controller
 {
-    public function __invoke(Category $category, HideCategoryAction $hideCategory)
+    /**
+     * @param  Category  $category
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws Throwable
+     */
+    public function store(Category $category): JsonResponse
     {
-        $hideCategory->execute($category);
+        $this->authorize('update', $category);
+
+        DB::beginTransaction();
+
+        try {
+            $category = (new CategoryService())->hide($category);
+
+            DB::commit();
+
+            return $this->apiResponse([
+                'data'    => new CategoryResource($category),
+                'message' => "$category->name category is now hidden.",
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * @param  Category  $category
+     * @return JsonResponse
+     * @throws AuthorizationException
+     * @throws Throwable
+     */
+    public function destroy(Category $category): JsonResponse
+    {
+        $this->authorize('update', $category);
+
+        DB::beginTransaction();
+
+        try {
+            $category = (new CategoryService())->unhide($category);
+
+            DB::commit();
+
+            return $this->apiResponse([
+                'data'    => new CategoryResource($category),
+                'message' => "$category->name category has been unhide.",
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::info($e->getMessage());
+            throw $e;
+        }
     }
 }

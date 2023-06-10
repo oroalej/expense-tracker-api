@@ -20,9 +20,8 @@ class AccountFactory extends Factory
     public function definition(): array
     {
         return [
-            'uuid' => $this->faker->uuid,
             'name' => $this->faker->word,
-            'current_balance' => $this->faker->randomFloat(2, 1, 999999),
+            'current_balance' => $this->faker->numberBetween(0, 999999),
         ];
     }
 

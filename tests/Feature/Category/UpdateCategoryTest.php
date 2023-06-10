@@ -5,14 +5,12 @@ namespace Tests\Feature\Category;
 use App\Models\Category;
 use App\Models\CategoryGroup;
 use App\Models\User;
-use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Str;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class UpdateCategoryTest extends TestCase
 {
-    public string $url;
-
     public Category $category;
 
     public CategoryGroup $categoryGroup;
@@ -27,9 +25,12 @@ class UpdateCategoryTest extends TestCase
 
         $this->category = Category::factory()
             ->for($this->categoryGroup)
+            ->for($this->ledger)
             ->create();
 
-        $this->url = "api/category-groups/{$this->categoryGroup->uuid}/categories/{$this->category->uuid}";
+        $categoryId = Hashids::encode($this->category->id);
+
+        $this->url = "api/categories/$categoryId";
     }
 
     public function test_guest_not_allowed(): void
@@ -39,10 +40,11 @@ class UpdateCategoryTest extends TestCase
 
     public function test_you_can_only_access_own_data(): void
     {
+        /** @var User $anotherUser */
         $anotherUser = User::factory()->create();
 
         $this->actingAs($anotherUser)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url)
             ->assertNotFound();
     }
@@ -50,7 +52,7 @@ class UpdateCategoryTest extends TestCase
     public function test_assert_name_field_is_required(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url)
             ->assertJsonValidationErrors('name');
     }
@@ -58,9 +60,9 @@ class UpdateCategoryTest extends TestCase
     public function test_assert_name_has_255_characters_max_length(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url, [
-                'name' => Str::random(Builder::$defaultStringLength),
+                'name' => Str::random(255),
             ])
             ->assertJsonMissingValidationErrors('name');
     }
@@ -68,9 +70,9 @@ class UpdateCategoryTest extends TestCase
     public function test_assert_name_field_is_not_more_than_255_characters(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url, [
-                'name' => Str::random(Builder::$defaultStringLength + 1),
+                'name' => Str::random(256),
             ])
             ->assertJsonValidationErrors('name');
     }
@@ -78,9 +80,9 @@ class UpdateCategoryTest extends TestCase
     public function test_assert_notes_has_255_characters_max_length(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url, [
-                'notes' => Str::random(Builder::$defaultStringLength),
+                'notes' => Str::random(255),
             ])
             ->assertJsonMissingValidationErrors('notes');
     }
@@ -88,7 +90,7 @@ class UpdateCategoryTest extends TestCase
     public function test_assert_notes_is_not_more_than_255_characters(): void
     {
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url, [
                 'notes' => Str::random(256),
             ])
@@ -98,59 +100,58 @@ class UpdateCategoryTest extends TestCase
     public function test_user_can_update_own_category(): void
     {
         $attributes = [
-            'name' => $this->faker->word,
+            'name'  => $this->faker->word,
             'notes' => $this->faker->sentence,
         ];
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url, $attributes)
             ->assertOk();
 
         $this->assertDatabaseHas('categories', [
-            'id' => $this->category->id,
-            'name' => $attributes['name'],
-            'notes' => $attributes['notes'],
+            'id'                => $this->category->id,
             'category_group_id' => $this->categoryGroup->id,
+            'name'              => $attributes['name'],
+            'notes'             => $attributes['notes'],
         ]);
     }
 
     public function test_assert_user_can_update_category_group(): void
     {
         $attributes = [
-            'name' => $this->faker->word,
+            'name'  => $this->faker->word,
             'notes' => $this->faker->sentence,
         ];
 
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
+            ->appendHeaderLedgerId()
             ->putJson($this->url, $attributes)
             ->assertOk();
 
         $this->assertDatabaseHas('categories', [
-            'id' => $this->category->id,
-            'name' => $attributes['name'],
-            'notes' => $attributes['notes'],
+            'id'                => $this->category->id,
             'category_group_id' => $this->categoryGroup->id,
+            'name'              => $attributes['name'],
+            'notes'             => $attributes['notes'],
         ]);
     }
 
     public function test_assert_api_has_correct_structure(): void
     {
-        $attributes = [
-            'name' => $this->faker->word,
-            'notes' => $this->faker->sentence,
-        ];
-
         $this->actingAs($this->user)
-            ->withHeaders(['X-LEDGER-ID' => $this->ledger->uuid])
-            ->putJson($this->url, $attributes)
-            ->assertJsonStructure([
-                'name',
-                'notes',
-                'created_at',
-                'updated_at',
-                'deleted_at',
-            ]);
+            ->appendHeaderLedgerId()
+            ->putJson($this->url, [
+                'name'  => $this->faker->word,
+                'notes' => $this->faker->sentence,
+            ])
+            ->assertJsonStructure(
+                $this->apiStructure([
+                    'id',
+                    'name',
+                    'notes',
+                    'category_group_id'
+                ])
+            );
     }
 }

@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
-use App\Models\Traits\UseUuid;
 use Database\Factories\TransactionFactory;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * @property int $id
- * @property string $uuid
  * @property int $account_id
  * @property int $category_id
  * @property float $inflow
@@ -29,13 +30,16 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  *
+ * @method static Builder|Transaction defaultSelect()
+ * @method static Builder|Transaction basicSelect()
+ * @method static Builder| \Illuminate\Database\Query\Builder|Transaction filterByLedgerTransactionDateAndOptionalCategoryId(int $ledgerId, int $month, int $year, int $categoryId = null)
+ * @method static Builder| \Illuminate\Database\Query\Builder|Transaction filterByAccountOrCategory(int $accountId = null, int $categoryId = null)
  * @method static TransactionFactory factory()
  */
 class Transaction extends Model
 {
     use HasFactory;
     use SoftDeletes;
-    use UseUuid;
 
     protected $fillable = [
         'remarks',
@@ -47,10 +51,12 @@ class Transaction extends Model
         'transaction_date',
         'approved_at',
         'rejected_at',
-        'cleared_at',
+        'cleared_at'
     ];
 
     protected $dates = ['transaction_date', 'approved_at', 'rejected_at', 'cleared_at'];
+
+    protected $touches = ['ledger'];
 
     protected $casts = [
         'is_approved' => 'boolean',
@@ -63,8 +69,161 @@ class Transaction extends Model
         return $this->belongsTo(Category::class);
     }
 
+    public function ledger(): BelongsTo
+    {
+        return $this->belongsTo(Ledger::class);
+    }
+
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function scopeDefaultSelect(Builder $builder)
+    {
+        $builder->select([
+            'id',
+            'account_id',
+            'category_id',
+            'ledger_id',
+            'is_approved',
+            'is_cleared',
+            'remarks',
+            'outflow',
+            'inflow',
+            'transaction_date'
+        ]);
+    }
+
+    public function scopeBasicSelect(Builder $builder)
+    {
+        $builder->select([
+            'id',
+            'account_id',
+            'category_id',
+            'transaction_date',
+            'remarks',
+            'inflow',
+            'outflow'
+        ]);
+    }
+
+    public function scopeFilterByLedgerTransactionDateAndOptionalCategoryId(
+        Builder $builder,
+        int $ledgerId,
+        int $month,
+        int $year,
+        ?int $categoryId = null
+    ) {
+        $builder->whereMonth('transaction_date', $month)
+            ->whereYear('transaction_date', $year)
+            ->where('ledger_id', $ledgerId)
+            ->when($categoryId, function (Builder $builder) use ($categoryId) {
+                $builder->where('category_id', $categoryId);
+            });
+    }
+
+    public function scopeFilterByAccountOrCategory(
+        Builder $builder,
+        int $accountId = null,
+        int $categoryId = null,
+    ) {
+        $builder->when($accountId, static function (Builder $builder) use ($accountId) {
+            $builder->where('account_id', $accountId);
+        })
+            ->when($categoryId, static function (Builder $builder) use ($categoryId) {
+                $builder->where('category_id', $categoryId);
+            });
+    }
+
+    /**
+     * @param  int|null  $accountId
+     * @param  int|null  $categoryId
+     * @return array
+     */
+    public static function getBalanceSummary(int $accountId = null, int $categoryId = null): array
+    {
+        $summary = Transaction::selectRaw("
+                COALESCE(SUM(inflow) - SUM(outflow), 0) as cleared_balance,
+                COALESCE(SUM(inflow) - SUM(outflow), 0) as uncleared_balance
+            ")
+            ->filterByAccountOrCategory($accountId, $categoryId)
+            ->where('is_cleared', false)
+            ->get();
+
+        $workingBalance = (int) $summary->value('cleared_balance') + $summary->value('uncleared_balance');
+
+        return [
+            'uncleared_balance' => $summary->value('uncleared_balance'),
+            'cleared_balance'   => $summary->value('cleared_balance'),
+            'working_balance'   => $workingBalance,
+        ];
+    }
+
+    /**
+     * @param  Carbon  $transactionDate
+     * @param  int  $ledgerId
+     * @param  int  $categoryId
+     * @return int
+     */
+    public static function getTotalActivityByDateCategoryIdAndLedgerId(
+        Carbon $transactionDate,
+        int $ledgerId,
+        int $categoryId
+    ): int {
+        return Transaction::selectRaw("COALESCE((SUM(inflow) - SUM(outflow)), 0) AS activity")
+            ->filterByLedgerTransactionDateAndOptionalCategoryId(
+                ledgerId: $ledgerId,
+                month: $transactionDate->get('month'),
+                year: $transactionDate->get('year'),
+                categoryId: $categoryId
+            )
+            ->get()
+            ->value('activity', 0);
+    }
+
+    /**
+     * Get the transactions, filter it by month and year of the transaction_date, ledger_id, and category_id
+     *
+     * @param  Carbon  $transactionDate
+     * @param  int  $ledgerId
+     * @param  int  $categoryId
+     * @return Collection
+     */
+    public static function getTransactionsByDateLedgerIdAndCategoryId(
+        Carbon $transactionDate,
+        int $ledgerId,
+        int $categoryId
+    ): Collection {
+        return Transaction::basicSelect()
+            ->filterByLedgerTransactionDateAndOptionalCategoryId(
+                ledgerId: $ledgerId,
+                month: $transactionDate->get('month'),
+                year: $transactionDate->get('year'),
+                categoryId: $categoryId
+            )
+            ->orderBy('category_id')
+            ->orderBy('transaction_date', 'desc')
+            ->get();
+    }
+
+    /**
+     * @param  int|null  $accountId
+     * @param  int|null  $categoryId
+     * @param  int  $perPage
+     * @return LengthAwarePaginator
+     */
+    public static function getPaginatedData(
+        int $accountId = null,
+        int $categoryId = null,
+        int $perPage = 15
+    ): LengthAwarePaginator {
+        return Transaction::defaultSelect()
+            ->filterByAccountOrCategory($accountId, $categoryId)
+            ->orderBy('is_cleared')
+            ->orderBy('is_approved')
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
     }
 }

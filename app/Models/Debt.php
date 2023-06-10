@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Traits\UseUuid;
 use Database\Factories\DebtFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +10,6 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string $uuid
  * @property int $ledger_id
  * @property string $name
  * @property string $notes
@@ -28,7 +26,6 @@ use Illuminate\Support\Carbon;
 class Debt extends Model
 {
     use HasFactory;
-    use UseUuid;
     use SoftDeletes;
 
     protected $fillable = [
