@@ -5,7 +5,7 @@ namespace App\Services\Transaction\Context;
 use App\Models\Transaction;
 use App\Services\Transaction\Contracts\TransactionInterface;
 use App\Services\Transaction\Factory\TransactionFactory;
-use App\Services\TransactionService;
+use App\Services\Transaction\TransactionService;
 
 class ActionTransactionContext
 {

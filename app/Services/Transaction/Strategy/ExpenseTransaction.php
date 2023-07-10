@@ -8,7 +8,7 @@ use App\Services\AccountService;
 use App\Services\BudgetCategoryService;
 use App\Services\Transaction\Contracts\TransactionInterface;
 use App\Services\Transaction\Factory\TransactionFactory;
-use App\Services\TransactionService;
+use App\Services\Transaction\TransactionService;
 
 class ExpenseTransaction implements TransactionInterface
 {

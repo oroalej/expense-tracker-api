@@ -9,6 +9,7 @@ use App\Models\BudgetCategory;
 use App\Models\Category;
 use App\Models\CategoryGroup;
 use App\Models\Transaction;
+use App\Services\Transaction\TransactionService;
 
 class CategoryGroupService
 {
@@ -90,10 +91,10 @@ class CategoryGroupService
             $transactions =  Transaction::whereIn('category_id', $toTransferCategoryIds)
                 ->get();
 
-            (new TransactionService())->massAssignCategoryId(
-                $transactions,
-                $destinationCategory
-            );
+//            (new TransactionService())->massAssignCategoryId(
+//                $transactions,
+//                $destinationCategory
+//            );
         }
 
         $categoryGroup->delete();

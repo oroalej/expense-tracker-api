@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Transaction;
 
 use App\DTO\TransactionData;
 use App\Models\Transaction;
