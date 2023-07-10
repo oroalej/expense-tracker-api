@@ -3,6 +3,7 @@
 namespace App\Services\Transaction;
 
 use App\DTO\TransactionData;
+use App\Models\Category;
 use App\Models\Transaction;
 use Carbon\Carbon;
 
@@ -126,5 +127,18 @@ class TransactionService
         $transaction->delete();
 
         return $transaction;
+    }
+
+    /**
+     * @param  Category  $originalCategory
+     * @param  Category  $targetCategory
+     * @return void
+     */
+    public function massAssignToAnotherCategory(Category $originalCategory, Category $targetCategory): void
+    {
+        Transaction::where('category_id', $originalCategory->id)
+            ->update([
+                'category_id' => $targetCategory->id
+            ]);
     }
 }

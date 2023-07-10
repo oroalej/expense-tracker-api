@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Category;
 
+use App\Http\Requests\CustomRequest;
 use App\Models\Category;
-use App\Models\CategoryGroup;
-use App\Rules\IsOwnData;
-use Gate;
+use App\Rules\IsSameCategoryType;
+use App\Rules\IsTopLevelCategory;
+use Illuminate\Support\Facades\Gate;
 
 /**
- * @property-read $id
  * @property-read Category $category
  */
-class CategoryGroupUpdateRequest extends CustomRequest
+class ChangeParentCategoryRequest extends CustomRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -26,15 +26,16 @@ class CategoryGroupUpdateRequest extends CustomRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'category_group_id' => [
+            'category_id' => [
                 'required',
-                new IsOwnData($this->ledger, CategoryGroup::class),
-            ],
+                new IsSameCategoryType($this->category->category_type->value),
+                new IsTopLevelCategory()
+            ]
         ];
     }
 }

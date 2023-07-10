@@ -12,7 +12,7 @@ class IsSameCategoryType implements Rule
      *
      * @return void
      */
-    public function __construct(public int|null $categoryType)
+    public function __construct(protected int|null $categoryType)
     {
     }
 

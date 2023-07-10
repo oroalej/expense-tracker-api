@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 use Vinkla\Hashids\Facades\Hashids;
 
-class DestroyCategoryTest extends TestCase
+class DeleteCategoryTest extends TestCase
 {
     public Category $category;
     public Account  $account;

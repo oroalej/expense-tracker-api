@@ -7,7 +7,7 @@ use App\DTO\CategoryData;
 use App\Models\Budget;
 use App\Models\BudgetCategory;
 use App\Models\Category;
-use App\Models\CategoryGroup;
+use App\Services\Transaction\TransactionService;
 
 class CategoryService
 {
@@ -71,10 +71,10 @@ class CategoryService
         if ($targetCategoryId && $category->transactions()->exists()) {
             $targetCategory = Category::find($targetCategoryId);
 
-//            (new TransactionService())->transferTransactionsToAnotherCategory(
-//                $category->transactions,
-//                $targetCategory
-//            );
+            (new TransactionService())->massAssignToAnotherCategory(
+                originalCategory: $category,
+                targetCategory: $targetCategory
+            );
 
             BudgetCategory::getSummaryFilteredByCategoryIds([$category->id, $targetCategoryId])
                 ->each(static function ($item) use ($targetCategory) {
@@ -110,12 +110,12 @@ class CategoryService
 
     /**
      * @param  Category  $category
-     * @param  CategoryGroup  $categoryGroup
+     * @param  Category  $parentCategory
      * @return Category
      */
-    public function changeCategoryGroup(Category $category, CategoryGroup $categoryGroup): Category
+    public function changeParentCategory(Category $category, Category $parentCategory): Category
     {
-        $category->categoryGroup()->associate($categoryGroup);
+        $category->parent()->associate($parentCategory);
         $category->save();
 
         return $category;

@@ -51,7 +51,11 @@ Route::middleware('auth:sanctum')->group(static function () {
             Route::apiResource('categories', CategoryController::class)->except('edit');
 
             Route::apiResource('categories', CategoryController::class)->except('store', 'edit');
-            Route::post('categories/{category}/actions', Controllers\Category\CategoryActionController::class);
+
+            Route::prefix('categories/{category}')->group(static function () {
+                Route::post('actions', Controllers\Category\CategoryActionController::class);
+                Route::post('change-parent-category', Controllers\Category\ChangeParentCategoryController::class);
+            });
 
             Route::apiResource('transactions', TransactionController::class);
             Route::prefix('transactions/{transaction}')->group(static function () {

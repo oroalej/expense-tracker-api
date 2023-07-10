@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Requests\Store;
+namespace App\Http\Requests\Category;
 
 use App\Enums\CategoryTypeState;
 use App\Http\Requests\CustomRequest;
 use App\Models\Category;
 use App\Models\Ledger;
+use App\Rules\IsCategoryTransactionExist;
 use App\Rules\IsOwnData;
 use App\Rules\IsSameCategoryType;
 use App\Rules\IsTopLevelCategory;
@@ -13,12 +14,13 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rules\Enum;
 
 /**
+ * @property int $category_type
  * @property string $name
  * @property string $notes
- * @property integer $category_type
- * @property Ledger $ledger
+ * @property-read Category $category
+ * @property-read Ledger $ledger
  */
-class StoreCategoryRequest extends CustomRequest
+class UpdateCategoryRequest extends CustomRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -27,7 +29,7 @@ class StoreCategoryRequest extends CustomRequest
      */
     public function authorize(): bool
     {
-        return Gate::allows('store', Category::class);
+        return Gate::allows('update', $this->category);
     }
 
     /**
@@ -41,7 +43,8 @@ class StoreCategoryRequest extends CustomRequest
             'name'          => 'required|max:255',
             'category_type' => [
                 'required',
-                new Enum(CategoryTypeState::class)
+                new Enum(CategoryTypeState::class),
+                new IsCategoryTransactionExist($this->category)
             ],
             'parent_id'     => [
                 'nullable',

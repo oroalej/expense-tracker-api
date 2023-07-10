@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Category;
 use App\DTO\CategoryData;
 use App\Enums\CategoryTypeState;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Destroy\DestroyCategoryRequest;
-use App\Http\Requests\Store\StoreCategoryRequest;
-use App\Http\Requests\Update\UpdateCategoryRequest;
+use App\Http\Requests\Category\DestroyCategoryRequest;
+use App\Http\Requests\Category\StoreCategoryRequest;
+use App\Http\Requests\Category\UpdateCategoryRequest;
+use App\Http\Requests\CustomRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use App\Services\CategoryService;
@@ -23,7 +24,7 @@ use Vinkla\Hashids\Facades\Hashids;
 
 class CategoryController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(CustomRequest $request): JsonResponse
     {
         $categories = Category::where('ledger_id', $request->ledger->id)
             ->with('child', function (Builder $builder) {

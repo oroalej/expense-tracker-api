@@ -3,8 +3,8 @@
 namespace App\DTO;
 
 use App\Enums\CategoryTypeState;
-use App\Http\Requests\Store\StoreCategoryRequest;
-use App\Http\Requests\Update\UpdateCategoryRequest;
+use App\Http\Requests\Category\StoreCategoryRequest;
+use App\Http\Requests\Category\UpdateCategoryRequest;
 use App\Models\Category;
 use App\Models\Ledger;
 

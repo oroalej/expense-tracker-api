@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Destroy;
+namespace App\Http\Requests\Category;
 
 use App\Http\Requests\CustomRequest;
 use App\Models\Category;

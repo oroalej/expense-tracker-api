@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Category;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CategoryGroupUpdateRequest;
+use App\Http\Requests\Category\ChangeParentCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
-use App\Models\CategoryGroup;
 use App\Services\CategoryService;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -14,31 +13,31 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class ChangeCategoryGroupController extends Controller
+class ChangeParentCategoryController extends Controller
 {
     /**
      * @param  Category  $category
-     * @param  CategoryGroupUpdateRequest  $request
+     * @param  ChangeParentCategoryRequest  $request
      * @return JsonResponse
      * @throws Throwable
      */
     public function __invoke(
-        Category $category,
-        CategoryGroupUpdateRequest $request
+        ChangeParentCategoryRequest $request,
+        Category $category
     ): JsonResponse {
         DB::beginTransaction();
 
         try {
-            $category = (new CategoryService())->changeCategoryGroup(
+            $category = (new CategoryService())->changeParentCategory(
                 $category,
-                CategoryGroup::find($request->get('category_group_id'))
+                Category::find($request->validated('category_id'))
             );
 
             DB::commit();
 
             return $this->apiResponse([
                 'data'    => new CategoryResource($category),
-                'message' => "$category->name category successfully updated.",
+                'message' => "$category->name category successfully updated parent category.",
             ]);
         } catch (Exception $e) {
             DB::rollBack();
