@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\CategoryTypeState;
 use App\Models\Traits\UseHashIds;
 use Database\Factories\CategoryFactory;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,13 +14,15 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string $hashid
- * @property int $category_group_id
+ * @property int $parent_id
  * @property int $ledger_id
+ * @property CategoryTypeState $category_type
  * @property string $name
  * @property string $notes
  * @property int $order
- * @property bool $is_hidden
+ * @property bool $is_visible
+ * @property bool $is_budgetable
+ * @property bool $is_reportable
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -35,13 +39,20 @@ class Category extends Model
         'name',
         'notes',
         'order',
-        'is_hidden',
+        'category_type',
+        'is_visible',
+        'is_budgetable',
+        'is_reportable',
+        'is_editable'
     ];
 
     protected $touches = ['ledger'];
 
     protected $casts = [
-        'is_hidden' => 'boolean',
+        'is_visible'    => 'boolean',
+        'is_budgetable' => 'boolean',
+        'is_reportable' => 'boolean',
+        'category_type' => CategoryTypeState::class,
     ];
 
     protected static function booted(): void
@@ -61,13 +72,35 @@ class Category extends Model
         return $this->hasMany(BudgetCategory::class);
     }
 
-    public function categoryGroup(): BelongsTo
+    public function parent(): BelongsTo
     {
-        return $this->belongsTo(CategoryGroup::class);
+        return $this->belongsTo(__CLASS__, 'parent_id');
+    }
+
+    public function child(): HasMany
+    {
+        return $this->hasMany(__CLASS__, 'parent_id');
     }
 
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * @param  int  $ledgerId
+     * @param  int  $categoryType
+     * @param  int|null  $parentId
+     * @return int
+     */
+    public static function getLastOrder(int $ledgerId, int $categoryType, int $parentId = null): int
+    {
+        return Category::where($ledgerId)
+                ->when($parentId, static function (Builder $builder) use ($parentId) {
+                    $builder->where('parent_id', $parentId);
+                }, static function (Builder $builder) use ($categoryType) {
+                    $builder->where('category_type', $categoryType);
+                })
+                ->count() + 1;
     }
 }

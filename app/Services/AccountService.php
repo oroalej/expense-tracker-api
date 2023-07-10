@@ -49,63 +49,19 @@ class AccountService
     /**
      * @param  Account  $account
      * @param  int  $amount
-     * @return Account
      */
-    public function addAccountBalance(Account $account, int $amount): Account
+    public function addAccountBalance(Account $account, int $amount): void
     {
         $account->increment('current_balance', $amount);
-
-        return $account;
     }
 
     /**
      * @param  Account  $account
      * @param  int  $amount
-     * @return Account
      */
-    public function deductAccountBalance(Account $account, int $amount): Account
+    public function deductAccountBalance(Account $account, int $amount): void
     {
         $account->decrement('current_balance', $amount);
-
-        return $account;
-    }
-
-    /**
-     * @param  Account  $account
-     * @param  int  $inflow
-     * @param  int  $outflow
-     * @return Account
-     */
-    public function adjustAccountBalance(Account $account, int $inflow = 0, int $outflow = 0): Account
-    {
-        $adjustmentAmount = $inflow - $outflow;
-
-        if ($adjustmentAmount) {
-            $this->addAccountBalance($account, $adjustmentAmount);
-        } else {
-            $this->deductAccountBalance($account, $adjustmentAmount);
-        }
-
-        return $account;
-    }
-
-    /**
-     * @param  Account  $account
-     * @param  int  $inflow
-     * @param  int  $outflow
-     * @return Account
-     */
-    public function rollbackAccountBalance(Account $account, int $inflow = 0, int $outflow = 0): Account
-    {
-        $adjustmentAmount = $outflow - $inflow;
-
-        if ($adjustmentAmount) {
-            $this->addAccountBalance($account, $adjustmentAmount);
-        } else {
-            $this->deductAccountBalance($account, $adjustmentAmount);
-        }
-
-        return $account;
     }
 
     /**

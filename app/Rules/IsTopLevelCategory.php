@@ -2,14 +2,11 @@
 
 namespace App\Rules;
 
+use App\Models\Category;
 use Illuminate\Contracts\Validation\Rule;
 
-class OnlyOneOfInflowOrOutflowIsField implements Rule
+class IsTopLevelCategory implements Rule
 {
-    public function __construct(public $amount)
-    {
-    }
-
     /**
      * Determine if the validation rule passes.
      *
@@ -19,13 +16,9 @@ class OnlyOneOfInflowOrOutflowIsField implements Rule
      */
     public function passes($attribute, $value): bool
     {
-        // NULL & NULL, NULL & 0, 0 & NULL, 0 & 0
-        if (empty($value) && empty($this->amount)) {
-            return false;
-        }
-
-        // 1000 & 1000
-        return !(!empty($value) && !empty($this->amount));
+        return Category::where('id', $value)
+            ->whereNull('parent_id')
+            ->exists();
     }
 
     /**
@@ -35,6 +28,6 @@ class OnlyOneOfInflowOrOutflowIsField implements Rule
      */
     public function message(): string
     {
-        return "Only one of inflow or outflow fields can be filled.";
+        return __('validation.exists');
     }
 }

@@ -2,11 +2,10 @@
 
 namespace Tests\Feature\Category;
 
+use App\Enums\CategoryTypeState;
 use App\Models\Category;
-use App\Models\CategoryGroup;
-use App\Models\Currency;
-use App\Models\Ledger;
 use Tests\TestCase;
+use Vinkla\Hashids\Facades\Hashids;
 
 class IndexCategoryTest extends TestCase
 {
@@ -22,38 +21,31 @@ class IndexCategoryTest extends TestCase
         $this->getJson($this->url)->assertUnauthorized();
     }
 
-    public function test_correct_returned_data(): void
+    public function test_parent_category_in_correct_order(): void
     {
-        $ledger = Ledger::factory()
-            ->for($this->user)
-            ->for(Currency::first())
-            ->create();
+        $categories = [];
 
-        Category::factory()
-            ->for($ledger)
-            ->for(CategoryGroup::factory()->for($ledger))
-            ->create();
+        foreach (CategoryTypeState::cases() as $case) {
+            $categories[strtolower($case->name)] = Category::select(['id', 'ledger_id', 'parent_id', 'category_type', 'order'])
+                ->where('ledger_id', $this->ledger->id)
+                ->where('parent_id')
+                ->where('category_type', $case->value)
+                ->orderBy('order')
+                ->pluck('id')
+                ->map(fn (int $id) => Hashids::encode($id))
+                ->toArray();
+        }
 
-        $categoryIds = Category::withoutGlobalScopes()
-            ->select([
-                'id', 'ledger_id', 'name', 'notes', 'order', 'category_group_id'
-            ])
-            ->where('ledger_id', $this->ledger->id)
-            ->withCount('transactions')
-            ->orderBy('category_group_id')
-            ->orderBy('order')
-            ->pluck('id')
-            ->toArray();
-
-        $responseCategoryIds = $this->actingAs($this->user)
+        $response = $this->actingAs($this->user)
             ->appendHeaderLedgerId()
             ->getJson($this->url)
             ->assertOk()
-            ->getOriginalContent()['result']
-            ->pluck('id')
-            ->toArray();
+            ->getContent();
 
-        $this->assertEquals($categoryIds, $responseCategoryIds);
+        $ids = json_decode($response)->result->ids;
+
+        $this->assertEquals($categories['income'], $ids->income);
+        $this->assertEquals($categories['expense'], $ids->expense);
     }
 
     public function test_api_has_correct_structure()
@@ -64,13 +56,21 @@ class IndexCategoryTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(
                 $this->apiStructure(
-                    $this->apiStructureCollection([
-                        'id',
-                        'name',
-                        'notes',
-                        'order',
-                        'is_hidden',
-                    ])
+                    [
+                        'ids',
+                        'entities' => $this->apiStructureCollection([
+                            'id',
+                            'parent_id',
+                            'name',
+                            'order',
+                            'category_type',
+                            'is_visible',
+                            'is_budgetable',
+                            'is_reportable',
+                            'transactions_count',
+                            'child'
+                        ])
+                    ]
                 )
             );
     }

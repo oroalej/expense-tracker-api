@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DTO\LedgerData;
+use App\Events\LedgerCreated;
 use App\Models\Ledger;
 
 class LedgerService
@@ -21,6 +22,8 @@ class LedgerService
         $ledger->user()->associate($attributes->user);
         $ledger->currency()->associate($attributes->currency);
         $ledger->save();
+
+        event(new LedgerCreated($ledger));
 
         return $ledger;
     }

@@ -11,8 +11,7 @@ use Vinkla\Hashids\Facades\Hashids;
  * @property-read int $category_id
  * @property-read int $account_id
  * @property-read int $ledger_id
- * @property-read float $inflow
- * @property-read float $outflow
+ * @property-read int $amount
  * @property-read string $remarks
  * @property-read bool $is_approved
  * @property-read bool $is_cleared
@@ -35,8 +34,7 @@ class TransactionResource extends JsonResource
     {
         return [
             'id'               => Hashids::encode($this->id),
-            'inflow'           => $this->inflow,
-            'outflow'          => $this->outflow,
+            'amount'           => $this->amount,
             'remarks'          => $this->remarks,
             'transaction_date' => $this->transaction_date->format('Y-m-d'),
             'is_approved'      => $this->whenColumnLoaded('is_approved'),

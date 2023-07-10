@@ -3,37 +3,52 @@
 namespace App\Http\Controllers\Category;
 
 use App\DTO\CategoryData;
+use App\Enums\CategoryTypeState;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Destroy\DestroyCategoryRequest;
 use App\Http\Requests\Store\StoreCategoryRequest;
 use App\Http\Requests\Update\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
-use App\Models\CategoryGroup;
 use App\Services\CategoryService;
 use Exception;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use Vinkla\Hashids\Facades\Hashids;
 
 class CategoryController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $categories = Category::select([
-            'id', 'name', 'notes', 'order', 'category_group_id'
-        ])
-            ->where('ledger_id', $request->ledger->id)
+        $categories = Category::where('ledger_id', $request->ledger->id)
+            ->with('child', function (Builder $builder) {
+                $builder->select(['parent_id', 'id'])
+                    ->orderBy('order');
+            })
             ->withCount('transactions')
-            ->orderBy('category_group_id')
             ->orderBy('order')
             ->get();
 
+        $ids = [];
+
+        foreach (CategoryTypeState::cases() as $value) {
+            $ids[strtolower($value->name)] = $categories
+                ->filter(fn (Category $category) => $category->category_type->value === $value->value && $category->parent_id === null)
+                ->pluck('id')
+                ->map(fn (int $categoryId) => Hashids::encode($categoryId))
+                ->toArray();
+        }
+
         return $this->apiResponse([
-            'data' => CategoryResource::collection($categories),
+            'data' => [
+                'ids' => $ids,
+                'entities' => CategoryResource::collection($categories),
+            ]
         ]);
     }
 
@@ -47,26 +62,18 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  CategoryGroup  $categoryGroup
      * @param  StoreCategoryRequest  $request
      * @return JsonResponse
      *
      * @throws Throwable
      */
-    public function store(
-        CategoryGroup $categoryGroup,
-        StoreCategoryRequest $request
-    ): JsonResponse {
+    public function store(StoreCategoryRequest $request): JsonResponse
+    {
         DB::beginTransaction();
 
         try {
             $category = (new CategoryService())->store(
-                new CategoryData(
-                    name: $request->validated('name'),
-                    category_group: $categoryGroup,
-                    ledger: $request->ledger,
-                    notes: $request->validated('notes'),
-                )
+                CategoryData::fromRequest($request)
             );
 
             DB::commit();
@@ -98,16 +105,18 @@ class CategoryController extends Controller
         try {
             $category = (new CategoryService())->update(
                 $category,
-                new CategoryData(
-                    name: $request->validated('name'),
-                    category_group: $category->categoryGroup,
-                    ledger: $request->ledger,
-                    notes: $request->validated('notes'),
-                    order: $category->order
-                )
+                CategoryData::fromRequest($request)
             );
 
             DB::commit();
+
+            $category->loadCount('transactions');
+            $category->loadMissing([
+                'child' => static function (Builder $builder) {
+                    $builder->select('parent_id', 'id', 'order')
+                        ->orderBy('order');
+                }
+            ]);
 
             return $this->apiResponse([
                 'data'    => new CategoryResource($category),
@@ -137,7 +146,7 @@ class CategoryController extends Controller
         try {
             (new CategoryService())->delete(
                 $category,
-                $request->get('category_id')
+                $request->validated('category_id')
             );
 
             DB::commit();

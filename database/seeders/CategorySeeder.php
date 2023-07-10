@@ -3,54 +3,69 @@
 namespace Database\Seeders;
 
 use App\DTO\CategoryData;
-use App\DTO\CategoryGroupData;
+use App\Enums\CategoryTypeState;
+use App\Models\Category;
 use App\Models\Ledger;
-use App\Services\CategoryGroupService;
 use App\Services\CategoryService;
 use Illuminate\Database\Seeder;
-use Throwable;
 
 class CategorySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @param  Ledger  $ledger
-     * @return void
-     *
-     * @throws Throwable
-     */
-    public function run(Ledger $ledger): void
+    public function __construct(readonly protected Ledger $ledger)
     {
-        foreach ($this->getData() as $index => $group) {
-            $categoryGroup = (new CategoryGroupService())->store(
-                new CategoryGroupData(
-                    name: $group['name'],
-                    notes: null,
-                    ledger: $ledger,
+    }
+
+    public function run(): void
+    {
+        $this->iterate($this->getIncomeData(), CategoryTypeState::INCOME);
+        $this->iterate($this->getExpenseData(), CategoryTypeState::EXPENSE);
+    }
+
+    public function iterate(array $data, CategoryTypeState $type, Category $parent = null)
+    {
+        foreach ($data as $index => $item) {
+            $name = $item;
+
+            if (is_array($item)) {
+                $name = $item['name'];
+            }
+
+            $category = (new CategoryService())->store(
+                new CategoryData(
+                    name: $name,
+                    ledger: $this->ledger,
+                    category_type: $type,
+                    parent: $parent,
+                    is_editable: $item['is_editable'] ?? true,
                     order: $index + 1
                 )
             );
 
-            foreach ($group['children'] as $order => $categoryName) {
-                (new CategoryService())->store(
-                    new CategoryData(
-                        name: $categoryName,
-                        category_group: $categoryGroup,
-                        ledger: $ledger,
-                        notes: null,
-                        order: $order + 1
-                    )
-                );
+            if (is_array($item) && array_key_exists('children', $item)) {
+                $this->iterate($item['children'], $type, $category);
             }
         }
     }
 
-    public function getData(): array
+    public function getIncomeData(): array
+    {
+        return [
+            'Salary',
+            'Gift',
+            'Goal',
+            'Business',
+            'Commission',
+            'Interest',
+            'Investment',
+            'Selling'
+        ];
+    }
+
+    public function getExpenseData(): array
     {
         return [
             [
-                'name' => 'Bills & Utilities',
+                'name'     => 'Bills & Utilities',
                 'children' => [
                     'Electricity',
                     'Gas',
@@ -60,9 +75,8 @@ class CategorySeeder extends Seeder
                     'Television',
                     'Water',
                 ],
-            ],
-            [
-                'name' => 'Transportation',
+            ], [
+                'name'     => 'Transportation',
                 'children' => [
                     'Fare',
                     'Maintenance',
@@ -70,16 +84,16 @@ class CategorySeeder extends Seeder
                     'Petrol',
                     'Taxi',
                 ],
-            ],
-            [
-                'name' => 'Shopping',
+            ], [
+                'name'     => 'Shopping',
                 'children' => [
                     'Clothing',
                     'Footwear',
                     'Accessories',
                     'Electronics',
+                    'Grocery'
                 ],
-            ],
+            ]
         ];
     }
 }

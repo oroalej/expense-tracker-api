@@ -5,9 +5,9 @@ namespace App\Http\Requests\Destroy;
 use App\Http\Requests\CustomRequest;
 use App\Models\Category;
 use App\Rules\IsOwnData;
+use App\Rules\IsSameCategoryType;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
-use Vinkla\Hashids\Facades\Hashids;
 
 /**
  * @property-read Category $category
@@ -40,8 +40,9 @@ class DestroyCategoryRequest extends CustomRequest
             return [
                 'category_id' => [
                     'required',
-                    Rule::notIn([Hashids::encode($this->category->id)]),
-                    new IsOwnData($this->ledger, Category::class)
+                    Rule::notIn([$this->category->id]),
+                    new IsOwnData($this->ledger, Category::class),
+                    new IsSameCategoryType($this->category->category_type->value)
                 ],
             ];
         }

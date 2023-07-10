@@ -3,15 +3,12 @@
 namespace App\Services;
 
 use App\DTO\BudgetCategoryData;
+use App\Enums\CategoryTypeState;
 use App\Models\BudgetCategory;
 use DB;
 
 class BudgetCategoryService
 {
-    /**
-     * @param  BudgetCategoryData  $attributes
-     * @return BudgetCategory
-     */
     public function store(BudgetCategoryData $attributes): BudgetCategory
     {
         $budgetCategory = new BudgetCategory([
@@ -42,18 +39,13 @@ class BudgetCategoryService
         return $budgetCategory;
     }
 
-    /**
-     * @param  BudgetCategory  $budgetCategory
-     * @param  int  $amount
-     * @return BudgetCategory
-     */
     public function adjustAssigned(
         BudgetCategory $budgetCategory,
         int $amount
     ): BudgetCategory {
         $budgetCategory->fill([
             'assigned'  => $amount,
-            'available' => $amount - $budgetCategory->activity
+            'available' => $amount - $budgetCategory->activity,
         ]);
 
         $budgetCategory->save();
@@ -61,47 +53,55 @@ class BudgetCategoryService
         return $budgetCategory;
     }
 
-    /**
-     * @param  BudgetCategory  $budgetCategory
-     * @param  int  $inflow
-     * @param  int  $outflow
-     * @return BudgetCategory
-     */
+    public function addActivity(BudgetCategory $budgetCategory, int $amount): void
+    {
+        $budgetCategory->fill([
+            'activity'  => DB::raw("activity + $amount"),
+            'available' => DB::raw("available + $amount"),
+        ]);
+        $budgetCategory->save();
+    }
+
+    public function deductActivity(BudgetCategory $budgetCategory, int $amount): void
+    {
+        $budgetCategory->fill([
+            'activity'  => DB::raw("activity - $amount"),
+            'available' => DB::raw("available - $amount"),
+        ]);
+        $budgetCategory->save();
+    }
+
     public function adjustActivity(
         BudgetCategory $budgetCategory,
-        int $inflow = 0,
-        int $outflow = 0
+        CategoryTypeState $categoryType,
+        int $amount,
     ): BudgetCategory {
-        $activityAmount = $inflow + $budgetCategory->activity - $outflow;
+        switch ($categoryType) {
+            case CategoryTypeState::INCOME:
+                $this->addActivity($budgetCategory, $amount);
+                break;
+            case CategoryTypeState::EXPENSE:
+                $this->deductActivity($budgetCategory, $amount);
+                break;
+        }
 
-        $budgetCategory->fill([
-            'activity'  => $activityAmount,
-            'available' => DB::raw("assigned + $activityAmount")
-        ]);
-        $budgetCategory->save();
-
-        return $budgetCategory;
+        return $budgetCategory->refresh();
     }
 
-    /**
-     * @param  BudgetCategory  $budgetCategory
-     * @param  int  $inflow
-     * @param  int  $outflow
-     * @return BudgetCategory
-     */
     public function rollbackActivity(
         BudgetCategory $budgetCategory,
-        int $inflow,
-        int $outflow
+        CategoryTypeState $categoryType,
+        int $amount,
     ): BudgetCategory {
-        $activityAmount = $outflow + $budgetCategory->activity - $inflow;
+        switch ($categoryType) {
+            case CategoryTypeState::INCOME:
+                $this->deductActivity($budgetCategory, $amount);
+                break;
+            case CategoryTypeState::EXPENSE:
+                $this->addActivity($budgetCategory, $amount);
+                break;
+        }
 
-        $budgetCategory->fill([
-            'activity'  => $activityAmount,
-            'available' => DB::raw("assigned + $activityAmount")
-        ]);
-        $budgetCategory->save();
-
-        return $budgetCategory;
+        return $budgetCategory->refresh();
     }
 }

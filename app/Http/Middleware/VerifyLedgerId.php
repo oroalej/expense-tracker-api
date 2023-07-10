@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Ledger;
 use Auth;
+use Cache;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,17 +26,28 @@ class VerifyLedgerId
             abort(404);
         }
 
-        $ledgerIdHashId = Hashids::decode($request->header('X-LEDGER-ID', ''));
+        $ledgerId = $request->header('X-LEDGER-ID', '');
 
-        if (empty($ledgerIdHashId)) {
-            abort(404);
-        }
+        if (Cache::has($ledgerId)) {
+            $ledger = Cache::get($ledgerId);
+        } else {
+            $ledgerIdHashId = Hashids::decode($ledgerId);
 
-        $ledger = Ledger::where('id', $ledgerIdHashId[0])
-            ->where('user_id', Auth::id())
-            ->firstOr(function () {
+            if (empty($ledgerIdHashId)) {
                 abort(404);
-            });
+            }
+
+            $ledger = Ledger::select([
+                'id', 'user_id', 'currency_id', 'is_archived'
+            ])
+                ->where('id', $ledgerIdHashId[0])
+                ->where('user_id', Auth::id())
+                ->firstOr(function () {
+                    abort(404);
+                });
+
+            Cache::set($ledgerId, $ledger);
+        }
 
         $request->merge([
             'ledger' => $ledger,

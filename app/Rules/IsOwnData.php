@@ -5,7 +5,6 @@ namespace App\Rules;
 use App\Models\Ledger;
 use App\Models\Model;
 use Illuminate\Contracts\Validation\Rule;
-use Vinkla\Hashids\Facades\Hashids;
 
 class IsOwnData implements Rule
 {
@@ -35,16 +34,6 @@ class IsOwnData implements Rule
 
         if (! $model instanceof Model) {
             return false;
-        }
-
-        if ($model->getRouteKeyName() === 'id') {
-            $decoded = Hashids::decode($value);
-
-            if (count($decoded) === 0) {
-                return false;
-            }
-
-            $value = $decoded[0];
         }
 
         return $model::where('ledger_id', $this->ledger->id)

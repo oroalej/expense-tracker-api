@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Throwable;
@@ -35,12 +36,12 @@ class FactorySeeder extends Seeder
             User::factory()
                 ->state(new Sequence(
                     [
-                        'name'  => 'Test User',
-                        'email' => 'test@example.com',
-                        'password' => Hash::make('jC8KedZ63d6G7Zz')
+                        'name'     => 'Test User',
+                        'email'    => 'test@example.com',
+                        'password' => Hash::make('1234')
                     ],
                     [
-                        'name' => 'Another Test User',
+                        'name'  => 'Another Test User',
                         'email' => 'test1@example.com'
                     ],
                 ))
@@ -79,6 +80,20 @@ class FactorySeeder extends Seeder
                                         ['account_id' => $accountIds[0]],
                                         ['account_id' => $accountIds[1]],
                                         ['account_id' => $accountIds[2]],
+                                    ))
+                                    ->state(new Sequence(
+                                        [
+                                            'is_approved' => true,
+                                            'is_cleared'  => true,
+                                            'cleared_at'  => Carbon::now(),
+                                            'approved_at' => Carbon::now()
+                                        ],
+                                        [
+                                            'is_approved' => true,
+                                            'approved_at' => Carbon::now(),
+                                            'is_cleared'  => false,
+                                            'cleared_at'  => null
+                                        ],
                                     ))
                                     ->count(25)
                                     ->create();

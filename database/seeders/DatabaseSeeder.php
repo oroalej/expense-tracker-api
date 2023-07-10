@@ -18,10 +18,11 @@ class DatabaseSeeder extends Seeder
             TermSeeder::class,
             AccountTypesSeeder::class,
             CurrencySeeder::class,
+            DefaultCategorySeeder::class
         ]);
 
-//        if (config('app.env') === 'local') {
-//            $this->call(FactorySeeder::class);
-//        }
+        if (config('app.env') === 'local') {
+            $this->call(FactorySeeder::class);
+        }
     }
 }

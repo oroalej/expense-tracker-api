@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Index;
 
 use App\Http\Requests\CustomRequest;
-use App\Rules\IsValidHashId;
+use App\Models\Account;
+use App\Rules\IsOwnData;
+use Illuminate\Validation\Rule;
 
 class IndexTransactionRequest extends CustomRequest
 {
@@ -25,14 +27,34 @@ class IndexTransactionRequest extends CustomRequest
     public function rules(): array
     {
         return [
-            'category_id' => [
-                'nullable',
-                new IsValidHashId()
-            ],
             'account_id' => [
                 'nullable',
-                new IsValidHashId()
-            ]
+                new IsOwnData($this->ledger, Account::class)
+            ],
+            'categories' => [
+                'nullable',
+                'regex:/^(included|excluded)\:(([\w]{12})[\,]*)+$/'
+            ],
+            'amount'     => [
+                'nullable',
+                'regex:/^(NOT_EMPTY|EMPTY)|(BETWEEN)\,([\d]+)\,([\d]+)|(EQUAL|GT|GTE|LT|LTE)\,([\d]+)$/'
+            ],
+            'sort'       => [
+                'nullable',
+                'regex:/^((transaction_date|amount|category_id)\:(asc|desc)[\,]*)*$/'
+            ],
+            'state'      => [
+                Rule::in(['action', 'clear'])
+            ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'categories.regex' => __('validation.exists'),
+            'amount.regex'     => __('validation.exists'),
+            'sort.regex'       => __('validation.exists')
         ];
     }
 }

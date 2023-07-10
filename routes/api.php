@@ -8,10 +8,6 @@ use App\Http\Controllers\Budget\AutoAssignController;
 use App\Http\Controllers\Budget\BudgetController;
 use App\Http\Controllers\BudgetCategory\BudgetCategoryController;
 use App\Http\Controllers\Category\CategoryController;
-use App\Http\Controllers\Category\ChangeCategoryGroupController;
-use App\Http\Controllers\Category\HideCategoryController;
-use App\Http\Controllers\CategoryGroup\CategoryGroupController;
-use App\Http\Controllers\CategoryGroup\HideCategoryGroupController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\Transaction\ApproveTransactionController;
 use App\Http\Controllers\Transaction\ClearTransactionController;
@@ -36,12 +32,12 @@ Route::middleware('auth:sanctum')->group(static function () {
             Route::get('account-types', AccountTypeController::class);
 
             Route::apiResource('ledgers', LedgerController::class)->except('index');
-
             Route::apiResource('budgets', BudgetController::class)->only('index', 'show');
-            Route::prefix('budgets/{budget}')->group(static function () {
-                Route::apiResource('budget-categories', BudgetCategoryController::class)
-                    ->parameter('budget-categories', 'budgetCategory');
+            Route::get('budgets/{budget}/budget-categories', [BudgetCategoryController::class, 'index']);
 
+            Route::prefix('budget-categories')->group(static function () {
+                Route::get('{budgetCategory}', [BudgetCategoryController::class, 'show']);
+                Route::put('{budgetCategory}', [BudgetCategoryController::class, 'update']);
                 Route::get('auto-assign', [AutoAssignController::class, 'index']);
                 Route::get('auto-assign/{category}', [AutoAssignController::class, 'show']);
             });
@@ -52,21 +48,10 @@ Route::middleware('auth:sanctum')->group(static function () {
                 Route::post('unarchive', [ArchiveAccountController::class, 'destroy']);
             });
 
-            Route::apiResource('category-groups', CategoryGroupController::class)
-                ->parameter('category-groups', 'categoryGroup');
-
-            Route::prefix('category-groups/{categoryGroup}')->group(static function () {
-                Route::post('categories', [CategoryController::class, 'store']);
-                Route::post('hide', [HideCategoryGroupController::class, 'store']);
-                Route::post('unhide', [HideCategoryGroupController::class, 'destroy']);
-            });
+            Route::apiResource('categories', CategoryController::class)->except('edit');
 
             Route::apiResource('categories', CategoryController::class)->except('store', 'edit');
-            Route::prefix('categories/{category}')->group(static function () {
-                Route::post('hide', [HideCategoryController::class, 'store']);
-                Route::post('unhide', [HideCategoryController::class, 'destroy']);
-                Route::post('change-category-group', ChangeCategoryGroupController::class);
-            });
+            Route::post('categories/{category}/actions', Controllers\Category\CategoryActionController::class);
 
             Route::apiResource('transactions', TransactionController::class);
             Route::prefix('transactions/{transaction}')->group(static function () {

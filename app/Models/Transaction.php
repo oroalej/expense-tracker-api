@@ -15,8 +15,8 @@ use Illuminate\Support\Collection;
  * @property int $id
  * @property int $account_id
  * @property int $category_id
- * @property float $inflow
- * @property float $outflow
+ * @property int $transfer_id
+ * @property int $amount
  * @property string $remarks
  * @property Carbon $transaction_date
  * @property bool $is_approved
@@ -43,8 +43,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'remarks',
-        'inflow',
-        'outflow',
+        'amount',
         'is_approved',
         'is_cleared',
         'is_excluded',
@@ -77,6 +76,11 @@ class Transaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function transfer(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'transfer_id');
     }
 
     public function scopeDefaultSelect(Builder $builder)
@@ -129,10 +133,10 @@ class Transaction extends Model
         int $categoryId = null,
     ) {
         $builder->when($accountId, static function (Builder $builder) use ($accountId) {
-            $builder->where('account_id', $accountId);
+            $builder->where('account_id', (int) $accountId);
         })
             ->when($categoryId, static function (Builder $builder) use ($categoryId) {
-                $builder->where('category_id', $categoryId);
+                $builder->where('category_id', (int) $categoryId);
             });
     }
 
@@ -208,21 +212,28 @@ class Transaction extends Model
     }
 
     /**
+     * @param  int  $ledgerId
      * @param  int|null  $accountId
      * @param  int|null  $categoryId
      * @param  int  $perPage
+     * @param  string  $sortBy
+     * @param  string  $orderBy
      * @return LengthAwarePaginator
      */
     public static function getPaginatedData(
+        int $ledgerId,
         int $accountId = null,
         int $categoryId = null,
-        int $perPage = 15
+        int $perPage = 15,
+        string $sortBy = 'transaction_date',
+        string$orderBy = 'desc'
     ): LengthAwarePaginator {
         return Transaction::defaultSelect()
-            ->filterByAccountOrCategory($accountId, $categoryId)
+            ->where('ledger_id', $ledgerId)
+            ->where('account_id', $accountId)
             ->orderBy('is_cleared')
             ->orderBy('is_approved')
-            ->orderBy('transaction_date', 'desc')
+            ->orderBy($sortBy, $orderBy)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }

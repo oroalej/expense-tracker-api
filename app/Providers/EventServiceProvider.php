@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\LedgerCreated;
+use App\Listeners\GenerateDefaultCategories;
 use App\Listeners\Registered\InitialLedger;
 use App\Models\Ledger;
 use App\Observers\LedgerObserver;
@@ -17,9 +19,12 @@ class EventServiceProvider extends ServiceProvider
      * @var array<class-string, array<int, class-string>>
      */
     protected $listen = [
-        Registered::class => [
+        Registered::class    => [
             SendEmailVerificationNotification::class,
             InitialLedger::class
+        ],
+        LedgerCreated::class => [
+            GenerateDefaultCategories::class
         ]
     ];
 

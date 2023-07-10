@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Transaction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
-use App\Services\TransactionService;
+use App\Services\Transaction\Context\ActionTransactionContext;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -28,7 +28,7 @@ class ApproveTransactionController extends Controller
         DB::beginTransaction();
 
         try {
-            $transaction = (new TransactionService())->approve($transaction);
+            $transaction = (new ActionTransactionContext($transaction))->approve();
 
             DB::commit();
 
@@ -58,7 +58,7 @@ class ApproveTransactionController extends Controller
         DB::beginTransaction();
 
         try {
-            $transaction = (new TransactionService())->reject($transaction);
+            $transaction = (new ActionTransactionContext($transaction))->reject();
 
             DB::commit();
 

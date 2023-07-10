@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class HideCategoryController extends Controller
+class VisibilityCategoryController extends Controller
 {
     /**
      * @param  Category  $category
@@ -28,13 +28,13 @@ class HideCategoryController extends Controller
         DB::beginTransaction();
 
         try {
-            $category = (new CategoryService())->hide($category);
+            $category = (new CategoryService())->visible($category);
 
             DB::commit();
 
             return $this->apiResponse([
                 'data'    => new CategoryResource($category),
-                'message' => "$category->name category is now hidden.",
+                'message' => "$category->name category is now visible",
             ]);
         } catch (Exception $e) {
             DB::rollBack();
@@ -57,13 +57,13 @@ class HideCategoryController extends Controller
         DB::beginTransaction();
 
         try {
-            $category = (new CategoryService())->unhide($category);
+            $category = (new CategoryService())->visible($category, false);
 
             DB::commit();
 
             return $this->apiResponse([
                 'data'    => new CategoryResource($category),
-                'message' => "$category->name category has been unhide.",
+                'message' => "$category->name category is now hidden.",
             ]);
         } catch (Exception $e) {
             DB::rollBack();

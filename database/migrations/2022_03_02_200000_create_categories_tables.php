@@ -12,42 +12,33 @@ return new class () extends Migration {
      */
     public function up(): void
     {
-        if (! Schema::hasTable('category_groups')) {
-            Schema::create('category_groups', static function (Blueprint $table) {
-                $table->id();
-                $table->string('hashid')->nullable();
-                $table
-                    ->foreignId('ledger_id')
-                    ->constrained()
-                    ->cascadeOnDelete();
-
-                $table->string('name');
-                $table->string('notes')->nullable();
-                $table->boolean('is_hidden')->default(false);
-                $table->tinyInteger('order');
-                $table->timestamps();
-                $table->softDeletes();
-            });
-        }
-
         if (! Schema::hasTable('categories')) {
             Schema::create('categories', static function (Blueprint $table) {
                 $table->id();
-                $table->string('hashid')->nullable();
-                $table
-                    ->foreignId('category_group_id')
-                    ->constrained();
+                $table->foreignId('parent_id')
+                    ->nullable()
+                    ->references('id')
+                    ->on('categories');
 
                 $table->foreignId('ledger_id')
-                    ->constrained();
+                    ->nullable()
+                    ->references('id')
+                    ->on('ledgers');
 
                 $table->string('name');
                 $table->string('notes')->nullable();
-                $table->boolean('is_hidden')->default(false);
-                $table->tinyInteger('order');
+                $table->unsignedTinyInteger('category_type');
+                $table->unsignedTinyInteger('order');
+                $table->boolean('is_visible')->default(true);
+                $table->boolean('is_budgetable')->default(true);
+                $table->boolean('is_reportable')->default(true);
+                $table->boolean('is_editable')->default(true);
 
                 $table->timestamps();
                 $table->softDeletes();
+
+                $table->index(['ledger_id', 'category_type']);
+                $table->index(['ledger_id', 'parent_id']);
             });
         }
     }
@@ -60,6 +51,5 @@ return new class () extends Migration {
     public function down(): void
     {
         Schema::dropIfExists('categories');
-        Schema::dropIfExists('category_groups');
     }
 };

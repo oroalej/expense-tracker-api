@@ -15,14 +15,26 @@ class CategoryService
     {
         $category = new Category($attributes->toArray());
 
-        if (is_null($attributes->order)) {
-            $category->order = $attributes->category_group
-                    ->categories()
-                    ->count() + 1;
+        if ($attributes->id) {
+            $category->id = $attributes->id;
         }
 
-        $category->categoryGroup()->associate($attributes->category_group);
-        $category->ledger()->associate($attributes->ledger);
+        if (is_null($attributes->order)) {
+            $category->order = Category::getLastOrder(
+                ledgerId: $attributes->ledger->id,
+                categoryType: $attributes->category_type->value,
+                parentId: $attributes->parent?->id
+            );
+        }
+
+        if ($attributes->parent) {
+            $category->parent()->associate($attributes->parent);
+        }
+
+        if ($attributes->ledger) {
+            $category->ledger()->associate($attributes->ledger);
+        }
+
         $category->save();
 
         return $category;
@@ -30,9 +42,25 @@ class CategoryService
 
     public function update(Category $category, CategoryData $attributes): Category
     {
-        $category->fill($attributes->toArray());
-        $category->categoryGroup()->associate($attributes->category_group);
+        $data = $attributes->toArray();
 
+        if ($category->transactions()->doesntExist()) {
+            $data['category_type'] = $category->category_type->value;
+        }
+
+        if ($attributes->parent) {
+            $category->parent()->associate($attributes->parent);
+        }
+
+        if ($category->isDirty('parent_id')) {
+            $data['order'] = Category::getLastOrder(
+                ledgerId: $category->ledger_id,
+                categoryType: $data['category_type'],
+                parentId: $attributes->parent?->id
+            );
+        }
+
+        $category->fill($data);
         $category->save();
 
         return $category;
@@ -43,39 +71,34 @@ class CategoryService
         if ($targetCategoryId && $category->transactions()->exists()) {
             $targetCategory = Category::find($targetCategoryId);
 
-            (new TransactionService())->massAssignCategoryId(
-                $category->transactions,
-                $targetCategory
-            );
-
-            $category->transactions()->update([
-                'category_id' => $targetCategoryId,
-            ]);
+//            (new TransactionService())->transferTransactionsToAnotherCategory(
+//                $category->transactions,
+//                $targetCategory
+//            );
 
             BudgetCategory::getSummaryFilteredByCategoryIds([$category->id, $targetCategoryId])
                 ->each(static function ($item) use ($targetCategory) {
-                    $budget         = Budget::find($item->budget_id);
+                    $budget             = Budget::find($item->budget_id);
+                    $budgetCategoryData = new BudgetCategoryData(
+                        category: $targetCategory,
+                        budget: $budget,
+                        assigned: $item->assigned,
+                        available: $item->available,
+                        activity: $item->activity
+                    );
+
                     $budgetCategory = BudgetCategory::getDataByBudgetAndCategory(
                         budget: $budget,
                         category: $targetCategory,
                     );
 
                     if ($budgetCategory) {
-                        $budgetCategory->update([
-                            'assigned'  => $item->assigned,
-                            'activity'  => $item->activity,
-                            'available' => $item->available,
-                        ]);
-                    } else {
-                        (new BudgetCategoryService())->store(
-                            new BudgetCategoryData(
-                                category: $targetCategory,
-                                budget: $budget,
-                                assigned: $item->assigned,
-                                available: $item->available,
-                                activity: $item->activity
-                            )
+                        (new BudgetCategoryService())->update(
+                            $budgetCategory,
+                            $budgetCategoryData
                         );
+                    } else {
+                        (new BudgetCategoryService())->store($budgetCategoryData);
                     }
                 });
         }
@@ -100,12 +123,13 @@ class CategoryService
 
     /**
      * @param  Category  $category
+     * @param  bool  $status
      * @return Category
      */
-    public function hide(Category $category): Category
+    public function budgetable(Category $category, bool $status = false): Category
     {
         $category->fill([
-            'is_hidden' => true,
+            'is_budgetable' => $status
         ]);
         $category->save();
 
@@ -114,12 +138,28 @@ class CategoryService
 
     /**
      * @param  Category  $category
+     * @param  bool  $status
      * @return Category
      */
-    public function unhide(Category $category): Category
+    public function reportable(Category $category, bool $status = false): Category
     {
         $category->fill([
-            'is_hidden' => false,
+            'is_reportable' => $status
+        ]);
+        $category->save();
+
+        return $category;
+    }
+
+    /**
+     * @param  Category  $category
+     * @param  bool  $status
+     * @return Category
+     */
+    public function visible(Category $category, bool $status = true): Category
+    {
+        $category->fill([
+            'is_visible' => $status,
         ]);
         $category->save();
 

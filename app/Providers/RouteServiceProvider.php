@@ -46,7 +46,7 @@ class RouteServiceProvider extends ServiceProvider
                 $decoded = Hashids::decode($id);
 
                 if (count($decoded)) {
-                    return $decoded[0];
+                    return (int) $decoded[0];
                 }
 
                 throw (new NotFoundHttpException());

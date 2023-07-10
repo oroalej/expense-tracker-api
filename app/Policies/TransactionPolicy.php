@@ -14,7 +14,7 @@ class TransactionPolicy
 
     public function __construct()
     {
-        $this->ledger = (object) request()->request->get('ledger', [
+        $this->ledger = (object) request()->get('ledger', [
             'id' => null,
             'user_id' => null
         ]);

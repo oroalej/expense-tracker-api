@@ -19,6 +19,11 @@ return new class () extends Migration {
                     ->constrained('accounts')
                     ->cascadeOnDelete();
 
+                $table->foreignId('transfer_id')
+                    ->nullable()
+                    ->constrained('accounts')
+                    ->cascadeOnDelete();
+
                 $table->foreignId('related_id')
                     ->nullable()
                     ->constrained('transactions')
@@ -34,8 +39,7 @@ return new class () extends Migration {
                 $table->boolean('is_cleared')->default(true);
                 $table->boolean('is_excluded')->default(false);
                 $table->string('remarks')->nullable();
-                $table->bigInteger('outflow')->default(0);
-                $table->bigInteger('inflow')->default(0);
+                $table->bigInteger('amount')->default(0);
                 $table->date('transaction_date');
                 $table->timestamp('approved_at')->nullable();
                 $table->timestamp('rejected_at')->nullable();
@@ -43,9 +47,7 @@ return new class () extends Migration {
                 $table->timestamps();
                 $table->softDeletes();
 
-                $table->index(['ledger_id', 'transaction_date', 'category_id']);
-                $table->index(['account_id', 'transaction_date']);
-                $table->index(['account_id', 'category_id']);
+                $table->index(['ledger_id', 'account_id', 'category_id']);
             });
         }
     }

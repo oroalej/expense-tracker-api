@@ -2,15 +2,13 @@
 
 namespace App\Rules;
 
-use App\Models\Model;
+use App\Models\Category;
 use Illuminate\Contracts\Validation\Rule;
 
-class IsDataExist implements Rule
+class IsCategoryTransactionExist implements Rule
 {
-    public function __construct(
-        public string $namespace,
-        public string $column = 'uuid'
-    ) {
+    public function __construct(protected Category $category)
+    {
     }
 
     /**
@@ -22,17 +20,11 @@ class IsDataExist implements Rule
      */
     public function passes($attribute, $value): bool
     {
-        if (! class_exists($this->namespace) || $value === null) {
+        if ($this->category->category_type !== $value && $this->category->transactions()->exists()) {
             return false;
         }
 
-        $model = app($this->namespace);
-
-        if (! $model instanceof Model) {
-            return false;
-        }
-
-        return $model::where($this->column, $value)->exists();
+        return true;
     }
 
     /**
@@ -42,6 +34,6 @@ class IsDataExist implements Rule
      */
     public function message(): string
     {
-        return __('validation.exists');
+        return 'Category Type cannot be changed when already used.';
     }
 }

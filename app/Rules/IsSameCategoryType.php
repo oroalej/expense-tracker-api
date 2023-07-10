@@ -31,7 +31,7 @@ class IsSameCategoryType implements Rule
 
         $categoryType = Category::find($value)?->getAttribute('category_type');
 
-        return $categoryType === $this->categoryType;
+        return $categoryType?->value === $this->categoryType;
     }
 
     /**

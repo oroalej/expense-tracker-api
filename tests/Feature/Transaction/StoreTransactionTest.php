@@ -6,7 +6,6 @@ use App\Enums\AccountTypeState;
 use App\Models\Account;
 use App\Models\AccountType;
 use App\Models\Category;
-use App\Models\CategoryGroup;
 use Illuminate\Database\Schema\Builder;
 use Str;
 use Tests\TestCase;
@@ -73,7 +72,7 @@ class StoreTransactionTest extends TestCase
             ->assertJsonMissingValidationErrors('remarks');
     }
 
-    public function test_remarks_is_not_more_than_255_characters(): void
+    public function test_assert_remarks_is_not_more_than_255_characters(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
@@ -83,7 +82,7 @@ class StoreTransactionTest extends TestCase
             ->assertJsonValidationErrors('remarks');
     }
 
-    public function test_transaction_date_is_required(): void
+    public function test_assert_transaction_date_is_required(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
@@ -91,7 +90,7 @@ class StoreTransactionTest extends TestCase
             ->assertJsonValidationErrors('transaction_date');
     }
 
-    public function test_transaction_date_is_in_correct_format(): void
+    public function test_assert_transaction_date_is_in_correct_format(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
@@ -99,7 +98,7 @@ class StoreTransactionTest extends TestCase
             ->assertJsonValidationErrors('transaction_date');
     }
 
-    public function test_transaction_date_is_valid(): void
+    public function test_assert_transaction_date_is_valid(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
@@ -107,7 +106,7 @@ class StoreTransactionTest extends TestCase
             ->assertJsonValidationErrors('transaction_date');
     }
 
-    public function test_is_approved_is_optional(): void
+    public function test_assert_is_approved_is_optional(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
@@ -115,7 +114,7 @@ class StoreTransactionTest extends TestCase
             ->assertJsonMissingValidationErrors('is_approved');
     }
 
-    public function test_is_cleared_is_optional(): void
+    public function test_assert_is_cleared_is_optional(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
@@ -123,170 +122,91 @@ class StoreTransactionTest extends TestCase
             ->assertJsonMissingValidationErrors('is_cleared');
     }
 
-    public function test_inflow_and_outflow_only_accept_number(): void
+    public function test_assert_amount_is_required(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
-            ->postJson($this->url, ['outflow' => 'Hello Code Reviewer :)'])
-            ->assertJsonValidationErrors('outflow');
+            ->postJson($this->url)
+            ->assertJsonValidationErrors('amount');
+    }
+
+    public function test_assert_amount_only_accept_number(): void
+    {
+        $this->actingAs($this->user)
+            ->appendHeaderLedgerId()
+            ->postJson($this->url, ['amount' => 'Hello Code Reviewer :)'])
+            ->assertJsonValidationErrors('amount');
 
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
-            ->postJson($this->url, ['inflow' => 'Hello Code Reviewer :)'])
-            ->assertJsonValidationErrors('inflow');
+            ->postJson($this->url, ['amount' => null])
+            ->assertJsonValidationErrors('amount');
     }
 
-    public function test_an_error_occurred_when_only_outflow_is_provided_with_null_value()
+    public function test_assert_amount_only_accept_positive_number()
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'outflow' => null,
+                'amount' => -1000
             ])
-            ->assertJsonValidationErrors('outflow');
+            ->assertJsonValidationErrors('amount');
     }
 
-    public function test_an_error_occurred_when_only_inflow_is_provided_with_null_value()
+    public function test_assert_amount_only_accepts_whole_number(): void
     {
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'inflow' => null,
+                'amount' => 99.11,
             ])
-            ->assertJsonValidationErrors('inflow');
+            ->assertJsonValidationErrors('amount');
     }
 
-    public function test_an_error_occurred_when_both_are_null()
+    public function test_assert_amount_only_accept_13_digits(): void
     {
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, [
-                'outflow' => null,
-                'inflow'  => null,
-            ])
-            ->assertJsonValidationErrors('inflow');
-    }
+        /** @var Category $incomeCategory */
+        $incomeCategory = Category::factory()
+            ->for($this->ledger)
+            ->incomeType()
+            ->create();
 
-    public function test_no_errors_when_inflow_is_zero_and_outflow_is_populated()
-    {
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, [
-                'outflow' => 1000,
-                'inflow'  => 0,
-            ])
-            ->assertJsonMissingValidationErrors(['outflow', 'inflow']);
-    }
-
-    public function test_no_errors_when_outflow_is_zero_and_inflow_is_populated()
-    {
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, [
-                'outflow' => 0,
-                'inflow'  => 1000,
-            ])
-            ->assertJsonMissingValidationErrors(['outflow', 'inflow']);
-    }
-
-    public function test_error_occurred_when_both_inflow_and_outflow_populated(): void
-    {
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, [
-                'outflow' => 1000,
-                'inflow'  => 1000,
-            ])
-            ->assertJsonValidationErrors(['outflow', 'inflow']);
-    }
-
-    public function test_no_errors_when_outflow_is_populated()
-    {
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, ['outflow' => 99999])
-            ->assertJsonMissingValidationErrors(['outflow', 'inflow']);
-    }
-
-    public function test_no_errors_when_inflow_is_populated()
-    {
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, ['inflow' => 99999])
-            ->assertJsonMissingValidationErrors(['outflow', 'inflow']);
-    }
-
-    public function test_inflow_and_outflow_accepts_decimals(): void
-    {
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, [
-                'outflow' => $this->faker->numberBetween(1, 999999),
-            ])
-            ->assertJsonMissingValidationErrors('outflow');
+        /** @var Category $expenseCategory */
+        $expenseCategory = Category::factory()
+            ->for($this->ledger)
+            ->expenseType()
+            ->create();
 
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'inflow' => $this->faker->numberBetween(1, 999999),
+                'category_id' => Hashids::encode($incomeCategory->id),
+                'amount'      => 99999999999999,
             ])
-            ->assertJsonMissingValidationErrors('inflow');
-    }
-
-    public function test_inflow_and_outflow_only_accept_10_digits(): void
-    {
-        $elevenDigits = 99999999999;
+            ->assertJsonValidationErrors('amount');
 
         $this->actingAs($this->user)
             ->appendHeaderLedgerId()
             ->postJson($this->url, [
-                'outflow' => $elevenDigits,
+                'category_id' => Hashids::encode($expenseCategory->id),
+                'amount'      => 99999999999999,
             ])
-            ->assertJsonValidationErrors('outflow');
-
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, [
-                'inflow' => $elevenDigits,
-            ])
-            ->assertJsonValidationErrors('inflow');
-    }
-
-    public function test_user_can_create_transaction(): void
-    {
-        [$category] = $this->createNecessaryData();
-
-        $attributes = [
-            'account_id'       => Hashids::encode($this->account->id),
-            'category_id'      => Hashids::encode($category->id),
-            'remarks'          => $this->faker->word,
-            'inflow'           => 5678,
-            'transaction_date' => $this->faker->date,
-        ];
-
-        $this->actingAs($this->user)
-            ->appendHeaderLedgerId()
-            ->postJson($this->url, $attributes)
-            ->assertCreated();
-
-        $this->assertDatabaseCount('transactions', 1);
-        $this->assertDatabaseHas('transactions', [
-            'account_id'  => $this->account->id,
-            'category_id' => $category->id,
-            'remarks'     => $attributes['remarks'],
-            'inflow'      => $attributes['inflow'],
-        ]);
+            ->assertJsonValidationErrors('amount');
     }
 
     public function test_api_has_correct_structure(): void
     {
-        [$category] = $this->createNecessaryData();
+        /** @var Category $category */
+        $category = Category::factory()
+            ->for($this->ledger)
+            ->incomeType()
+            ->create();
 
         $attributes = [
             'account_id'       => Hashids::encode($this->account->id),
             'category_id'      => Hashids::encode($category->id),
             'remarks'          => $this->faker->word,
-            'inflow'           => 1234,
+            'amount'           => 1234,
             'transaction_date' => $this->faker->date,
         ];
 
@@ -297,9 +217,11 @@ class StoreTransactionTest extends TestCase
             ->assertJsonStructure(
                 $this->apiStructure([
                     'id',
+                    'ledger_id',
+                    'category_id',
+                    'account_id',
                     'remarks',
-                    'outflow',
-                    'inflow',
+                    'amount',
                     'transaction_date',
                     'is_approved',
                     'is_cleared',
@@ -307,20 +229,5 @@ class StoreTransactionTest extends TestCase
                     'updated_at',
                 ])
             );
-    }
-
-    protected function createNecessaryData(): array
-    {
-        $categoryGroup = CategoryGroup::factory()
-            ->for($this->ledger)
-            ->create();
-
-        /** @var Category $category */
-        $category = Category::factory()
-            ->for($categoryGroup)
-            ->for($this->ledger)
-            ->create();
-
-        return [$category, $categoryGroup];
     }
 }

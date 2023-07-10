@@ -2,10 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\BudgetCategory;
 use App\Models\Transaction;
-use App\Services\AccountService;
-use App\Services\BudgetCategoryService;
+use App\Services\Transaction\Factory\TransactionFactory as TransactionStrategy;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -23,20 +21,10 @@ class TransactionFactory extends Factory
      */
     public function definition(): array
     {
-        $inflow     = $this->faker->boolean;
-        $isCleared  = $this->faker->boolean;
-        $isApproved = $this->faker->boolean;
-        $date       = $this->faker->dateTimeThisYear('4 months');
-
         return [
-            'inflow'           => $inflow ? $this->faker->numberBetween(0, 200000) : 0,
-            'outflow'          => $inflow ? 0 : $this->faker->numberBetween(0, 200000),
             'remarks'          => $this->faker->sentence,
-            'transaction_date' => $date,
-            'is_cleared'       => $isCleared,
-            'cleared_at'       => $isCleared ? Carbon::now() : null,
-            'is_approved'      => $isApproved || $isCleared,
-            'approved_at'      => $isApproved || $isCleared ? Carbon::now() : null
+            'transaction_date' => $this->faker->dateTimeThisYear('4 months'),
+            'amount'           => $this->faker->numberBetween(1, 200000),
         ];
     }
 
@@ -47,6 +35,16 @@ class TransactionFactory extends Factory
             'approved_at' => Carbon::now(),
             'is_cleared'  => false,
             'cleared_at'  => null,
+        ]);
+    }
+
+    public function unapproved(): TransactionFactory
+    {
+        return $this->state(fn () => [
+            'is_approved' => false,
+            'approved_at' => null,
+            'is_cleared'  => true,
+            'cleared_at'  => Carbon::now(),
         ]);
     }
 
@@ -85,38 +83,19 @@ class TransactionFactory extends Factory
         ]);
     }
 
-    public function setOutflow(int $amount = 0): TransactionFactory
+    public function setAmount(int $amount = 0): TransactionFactory
     {
         return $this->state(fn () => [
-            'outflow' => $amount ?? $this->faker->numberBetween(0, 200000),
-            'inflow'  => 0
-        ]);
-    }
-
-    public function setInflow(int $amount = 0): TransactionFactory
-    {
-        return $this->state(fn () => [
-            'outflow' => 0,
-            'inflow'  => $amount ?? $this->faker->numberBetween(0, 200000),
+            'amount' => $amount ?? $this->faker->numberBetween(1, 200000),
         ]);
     }
 
     public function configure(): TransactionFactory
     {
-        return $this->afterCreating(static function (Transaction $transaction) {
-            (new BudgetCategoryService())->adjustActivity(
-                budgetCategory: BudgetCategory::getByTransaction($transaction),
-                inflow: $transaction->inflow,
-                outflow: $transaction->outflow,
-            );
+        return $this->afterMaking(static function (Transaction $transaction) {
+            $transaction->loadMissing('category');
 
-            if ($transaction->is_cleared & $transaction->is_approved) {
-                (new AccountService())->adjustAccountBalance(
-                    account: $transaction->account,
-                    inflow: $transaction->inflow,
-                    outflow: $transaction->outflow
-                );
-            }
+            (TransactionStrategy::getStrategy($transaction->category))->store($transaction);
         });
     }
 }

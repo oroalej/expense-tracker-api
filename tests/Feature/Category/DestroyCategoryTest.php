@@ -6,13 +6,12 @@ use App\Models\Account;
 use App\Models\AccountType;
 use App\Models\Budget;
 use App\Models\Category;
-use App\Models\CategoryGroup;
 use App\Models\Currency;
 use App\Models\Ledger;
 use App\Models\Transaction;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Sequence;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -20,9 +19,8 @@ use Vinkla\Hashids\Facades\Hashids;
 
 class DestroyCategoryTest extends TestCase
 {
-    public Category      $category;
-    public CategoryGroup $categoryGroup;
-    public Account       $account;
+    public Category $category;
+    public Account  $account;
 
     protected function setUp(): void
     {
@@ -33,13 +31,9 @@ class DestroyCategoryTest extends TestCase
             ->for(AccountType::first())
             ->create();
 
-        $this->categoryGroup = CategoryGroup::factory()
-            ->for($this->ledger)
-            ->create();
-
         $this->category = Category::factory()
             ->for($this->ledger)
-            ->for($this->categoryGroup)
+            ->expenseType()
             ->create();
 
         $categoryId = Hashids::encode($this->category->id);
@@ -79,6 +73,8 @@ class DestroyCategoryTest extends TestCase
             ->for($this->account)
             ->for($this->ledger)
             ->for($this->category)
+            ->setAmount()
+            ->cleared()
             ->create();
 
         $this->actingAs($this->user)
@@ -93,6 +89,8 @@ class DestroyCategoryTest extends TestCase
             ->for($this->account)
             ->for($this->ledger)
             ->for($this->category)
+            ->setAmount()
+            ->cleared()
             ->create();
 
         $this->actingAs($this->user)
@@ -103,12 +101,14 @@ class DestroyCategoryTest extends TestCase
             ->assertJsonValidationErrors('category_id');
     }
 
-    public function test_category_id_is_not_the_destination_category(): void
+    public function test_category_id_is_not_the_same_as_destination_category(): void
     {
         Transaction::factory()
             ->for($this->account)
             ->for($this->ledger)
             ->for($this->category)
+            ->setAmount()
+            ->cleared()
             ->create();
 
         $this->actingAs($this->user)
@@ -119,12 +119,38 @@ class DestroyCategoryTest extends TestCase
             ->assertJsonValidationErrors('category_id');
     }
 
+    public function test_assert_category_and_destination_category_has_the_same_category_type()
+    {
+        Transaction::factory()
+            ->for($this->account)
+            ->for($this->ledger)
+            ->for($this->category)
+            ->setAmount()
+            ->cleared()
+            ->create();
+
+        /** @var Category $destinationCategory */
+        $destinationCategory = Category::factory()
+            ->for($this->ledger)
+            ->incomeType()
+            ->create();
+
+        $this->actingAs($this->user)
+            ->appendHeaderLedgerId()
+            ->deleteJson($this->url, [
+                'category_id' => Hashids::encode($destinationCategory->id)
+            ])
+            ->assertJsonValidationErrors('category_id');
+    }
+
     public function test_category_id_is_under_the_same_ledger(): void
     {
         Transaction::factory()
             ->for($this->account)
             ->for($this->ledger)
             ->for($this->category)
+            ->setAmount()
+            ->cleared()
             ->create();
 
         $ledger = Ledger::factory()
@@ -134,8 +160,8 @@ class DestroyCategoryTest extends TestCase
 
         /** @var Category $category */
         $category = Category::factory()
-            ->for(CategoryGroup::factory()->for($ledger))
             ->for($ledger)
+            ->expenseType()
             ->create();
 
         $this->actingAs($this->user)
@@ -148,18 +174,20 @@ class DestroyCategoryTest extends TestCase
 
     public function test_category_transactions_are_transferred_to_destination_category()
     {
-        /** @var Collection $transactions */
+        /** @var Collection<Transaction> $transactions */
         $transactions = Transaction::factory()
             ->for($this->account)
             ->for($this->ledger)
             ->for($this->category)
+            ->setAmount()
+            ->cleared()
             ->count(2)
             ->create();
 
         /** @var Category $destinationCategory */
         $destinationCategory = Category::factory()
             ->for($this->ledger)
-            ->for($this->categoryGroup)
+            ->expenseType()
             ->create();
 
         $transactions->each(function (Transaction $transaction) {
@@ -188,8 +216,8 @@ class DestroyCategoryTest extends TestCase
     {
         /** @var Category $destinationCategory */
         $destinationCategory = Category::factory()
-            ->for($this->category->categoryGroup)
             ->for($this->ledger)
+            ->expenseType()
             ->create();
 
         Transaction::factory()
@@ -199,16 +227,15 @@ class DestroyCategoryTest extends TestCase
             ->state(new Sequence(
                 [
                     'transaction_date' => Carbon::now()->subMonth(),
-                    'inflow'           => 4000,
-                    'outflow'          => 0
+                    'amount'           => 4000,
                 ],
                 [
                     'transaction_date' => Carbon::now(),
-                    'inflow'           => 0,
-                    'outflow'          => 1700
+                    'amount'           => 1700
                 ]
             ))
             ->count(4)
+            ->cleared()
             ->create();
 
         $budget1 = Budget::getDataByDateAndLedger(Carbon::now()->subMonth(), $this->ledger);
@@ -222,15 +249,15 @@ class DestroyCategoryTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('budget_categories', [
-            'budget_id'   => $budget1['id'],
+            'budget_id'   => $budget1->id,
             'category_id' => $destinationCategory->id,
-            'activity'    => 8000,
-            'available'   => 8000,
+            'activity'    => -8000,
+            'available'   => -8000,
             'assigned'    => 0,
         ]);
 
         $this->assertDatabaseHas('budget_categories', [
-            'budget_id'   => $budget2['id'],
+            'budget_id'   => $budget2->id,
             'category_id' => $destinationCategory->id,
             'activity'    => -3400,
             'available'   => -3400,

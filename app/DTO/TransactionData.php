@@ -16,8 +16,8 @@ class TransactionData
         public readonly Category $category,
         public readonly Account $account,
         public readonly Ledger $ledger,
-        public readonly ?int $inflow = 0,
-        public readonly ?int $outflow = 0,
+        public readonly int $amount,
+        public readonly ?Account $transfer = null,
         public readonly bool $is_approved = true,
         public readonly bool $is_cleared = true,
         public readonly bool $is_excluded = false
@@ -27,8 +27,7 @@ class TransactionData
     public function toArray(): array
     {
         return [
-            'inflow'           => $this->inflow,
-            'outflow'          => $this->outflow,
+            'amount'           => $this->amount,
             'remarks'          => $this->remarks,
             'transaction_date' => $this->transaction_date,
             'is_approved'      => $this->is_approved,
@@ -44,17 +43,23 @@ class TransactionData
     public static function fromRequest(
         UpdateTransactionRequest|StoreTransactionRequest $request
     ): TransactionData {
+        $transferAccount = null;
+
+        if ($request->filled('transfer_id')) {
+            $transferAccount = Account::find($request->validated('transfer_id'));
+        }
+
         return new self(
             remarks: $request->validated('remarks'),
             transaction_date: $request->validated('transaction_date'),
-            category: Category::find($request->get('category_id')),
-            account: Account::find($request->get('account_id')),
+            category: Category::find($request->validated('category_id')),
+            account: Account::find($request->validated('account_id')),
             ledger: $request->ledger,
-            inflow: (int) $request->validated('inflow', 0),
-            outflow: (int) $request->validated('outflow', 0),
+            amount: (int) $request->validated('amount', 0),
+            transfer: $transferAccount,
             is_approved: $request->validated('is_approved', true),
-            is_cleared: $request->validated('is_cleared', false),
-            is_excluded: $request->validated('is_excluded', false)
+            is_cleared: $request->validated('is_cleared', true),
+            is_excluded: $request->validated('is_excluded', false),
         );
     }
 }
