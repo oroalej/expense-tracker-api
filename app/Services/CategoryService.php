@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\DTO\BudgetCategoryData;
-use App\DTO\CategoryData;
+use App\DTO\Category\CategoryActionsData;
+use App\DTO\Category\CategoryData;
+use App\DTO\Category\DefaultCategoryData;
 use App\Models\Budget;
 use App\Models\BudgetCategory;
 use App\Models\Category;
@@ -11,18 +13,14 @@ use App\Services\Transaction\TransactionService;
 
 class CategoryService
 {
-    public function store(CategoryData $attributes): Category
+    public function store(CategoryData|DefaultCategoryData $attributes): Category
     {
         $category = new Category($attributes->toArray());
 
-        if ($attributes->id) {
-            $category->id = $attributes->id;
-        }
-
         if (is_null($attributes->order)) {
             $category->order = Category::getLastOrder(
-                ledgerId: $attributes->ledger->id,
                 categoryType: $attributes->category_type->value,
+                ledgerId: $attributes->ledger?->id,
                 parentId: $attributes->parent?->id
             );
         }
@@ -31,7 +29,7 @@ class CategoryService
             $category->parent()->associate($attributes->parent);
         }
 
-        if ($attributes->ledger) {
+        if (array_key_exists('ledger', $attributes->toArray()) && $attributes->ledger) {
             $category->ledger()->associate($attributes->ledger);
         }
 
@@ -42,25 +40,20 @@ class CategoryService
 
     public function update(Category $category, CategoryData $attributes): Category
     {
-        $data = $attributes->toArray();
+        $category->fill($attributes->toArray());
 
-        if ($category->transactions()->doesntExist()) {
-            $data['category_type'] = $category->category_type->value;
+        if ($category->isDirty('parent_id')) {
+            $category->order = Category::getLastOrder(
+                categoryType: $attributes->category_type->value,
+                ledgerId: $category->ledger_id,
+                parentId: $attributes->parent?->id
+            );
         }
 
         if ($attributes->parent) {
             $category->parent()->associate($attributes->parent);
         }
 
-        if ($category->isDirty('parent_id')) {
-            $data['order'] = Category::getLastOrder(
-                ledgerId: $category->ledger_id,
-                categoryType: $data['category_type'],
-                parentId: $attributes->parent?->id
-            );
-        }
-
-        $category->fill($data);
         $category->save();
 
         return $category;
@@ -72,7 +65,7 @@ class CategoryService
             $targetCategory = Category::find($targetCategoryId);
 
             (new TransactionService())->massAssignToAnotherCategory(
-                originalCategory: $category,
+                originCategory: $category,
                 targetCategory: $targetCategory
             );
 
@@ -123,44 +116,19 @@ class CategoryService
 
     /**
      * @param  Category  $category
-     * @param  bool  $status
+     * @param  CategoryActionsData  $attributes
      * @return Category
+     *
+     * Reportable, Budgetable, Visible
      */
-    public function budgetable(Category $category, bool $status = false): Category
+    public function actions(Category $category, CategoryActionsData $attributes): Category
     {
         $category->fill([
-            'is_budgetable' => $status
+            'is_visible'    => $attributes->is_visible ?? $category->is_visible,
+            'is_budgetable' => $attributes->is_budgetable ?? $category->is_budgetable,
+            'is_reportable' => $attributes->is_reportable ?? $category->is_reportable,
         ]);
-        $category->save();
 
-        return $category;
-    }
-
-    /**
-     * @param  Category  $category
-     * @param  bool  $status
-     * @return Category
-     */
-    public function reportable(Category $category, bool $status = false): Category
-    {
-        $category->fill([
-            'is_reportable' => $status
-        ]);
-        $category->save();
-
-        return $category;
-    }
-
-    /**
-     * @param  Category  $category
-     * @param  bool  $status
-     * @return Category
-     */
-    public function visible(Category $category, bool $status = true): Category
-    {
-        $category->fill([
-            'is_visible' => $status,
-        ]);
         $category->save();
 
         return $category;

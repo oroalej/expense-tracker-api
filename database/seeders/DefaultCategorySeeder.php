@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\DTO\CategoryData;
+use App\DTO\Category\DefaultCategoryData;
 use App\Enums\CategoryTypeState;
 use App\Enums\DefaultCategoryIDs;
 use App\Models\Category;
@@ -31,7 +31,7 @@ class DefaultCategorySeeder extends Seeder
             }
 
             $category = (new CategoryService())->store(
-                new CategoryData(
+                new DefaultCategoryData(
                     name: $item['name'],
                     category_type: $type,
                     parent: $parent,

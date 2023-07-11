@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\DTO\CategoryData;
+use App\DTO\Category\CategoryData;
 use App\Enums\CategoryTypeState;
 use App\Models\Category;
 use App\Models\Ledger;

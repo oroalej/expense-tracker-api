@@ -1,6 +1,6 @@
 <?php
 
-namespace App\DTO;
+namespace App\DTO\Category;
 
 use App\Enums\CategoryTypeState;
 use App\Http\Requests\Category\StoreCategoryRequest;
@@ -12,8 +12,8 @@ class CategoryData
 {
     public function __construct(
         public readonly string $name,
+        public readonly Ledger $ledger,
         public readonly CategoryTypeState $category_type,
-        public readonly ?Ledger $ledger = null,
         public readonly ?Category $parent = null,
         public readonly ?string $notes = "",
         public readonly ?bool $is_visible = true,

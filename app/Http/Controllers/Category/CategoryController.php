@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Category;
 
-use App\DTO\CategoryData;
+use App\DTO\Category\CategoryData;
 use App\Enums\CategoryTypeState;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Category\DestroyCategoryRequest;
@@ -15,7 +15,6 @@ use App\Services\CategoryService;
 use Exception;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;

@@ -88,14 +88,17 @@ class Category extends Model
     }
 
     /**
-     * @param  int  $ledgerId
      * @param  int  $categoryType
+     * @param  int|null  $ledgerId
      * @param  int|null  $parentId
      * @return int
      */
-    public static function getLastOrder(int $ledgerId, int $categoryType, int $parentId = null): int
-    {
-        return Category::where($ledgerId)
+    public static function getLastOrder(
+        int $categoryType,
+        int|null $ledgerId = null,
+        int|null $parentId = null
+    ): int {
+        return Category::where('ledger_id', $ledgerId)
                 ->when($parentId, static function (Builder $builder) use ($parentId) {
                     $builder->where('parent_id', $parentId);
                 }, static function (Builder $builder) use ($categoryType) {
