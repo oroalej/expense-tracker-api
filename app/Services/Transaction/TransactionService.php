@@ -130,13 +130,13 @@ class TransactionService
     }
 
     /**
-     * @param  Category  $originalCategory
+     * @param  Category  $originCategory
      * @param  Category  $targetCategory
      * @return void
      */
-    public function massAssignToAnotherCategory(Category $originalCategory, Category $targetCategory): void
+    public function massAssignToAnotherCategory(Category $originCategory, Category $targetCategory): void
     {
-        Transaction::where('category_id', $originalCategory->id)
+        Transaction::where('category_id', $originCategory->id)
             ->update([
                 'category_id' => $targetCategory->id
             ]);
